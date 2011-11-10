@@ -1,0 +1,81 @@
+RFM12
+Anforderung:
+- geringer Stromverbrauch
+- Prüfsumme / fehlerhafte Nachrichten verwerfen
+- einfache Adressierung
+
+Thermostat -> Station:
+Regelmäßig:
+ - IST Temperatur
+ - SOLL Temperatur
+ - Ventilstellung
+ - Uhrzeitdaten dazu
+Situationsbedingt:
+ - Programmierereignisse
+
+Station -> Thermostat:
+Situationsbedingt:
+ - Zeitprogrammierung:
+   Einmalige/Wiederkehrende Ereignisse setzen, löschen, auslesen
+ - Heizbefehl: Heize _jetzt_. Eventuell mit Zeitereignis kombinierbar?
+
+
+ - Außen- und Vorlauftemperatur bzw. eine Art daraus gebildete "Heizzahl"?
+
+Nachrichtenformat:
+Adresse, Typ der Nachricht, Nachrichtentypspezifische Daten, Checksumme 
+Adresse - 8 Bit
+Typ - 8 Bit
+Daten - variabel
+Checksumme - CRC-CCITT (16 Bit; HD 4 bis 4kByte Daten sichere Erkennung von 1- und 2 Bit fehlern)
+Adresse:
+0 - Broadcast
+1 - Master
+2-n - Slaves, min. 14 -> min. 4 Bit
+
+Nachrichtentypen
+Thermostatinfo:
+ IST Temperatur - 16 Bit, 4 Bit Nachkomma, Zweierkomplement
+ SOLL Temperatur - 16 Bit, 4 Bit Nachkomma, Zweierkomplement
+ VENTILSTELLUNG - 8 Bit, 0 = zu, 255 = Offen
+ Uhrzeit (gemäß Uhrzeitformat 3+5 + 8 Bit)
+
+Zeitprogrammierung: (4 Byte)
+ Wochentage (Montag-Sonntag, jeweils 1 Bit; 1 Bit für EINMALIGES ereignis)
+ Uhrzeit Beginn 1 Byte: 5 Bit Stunde (0-23) , 3 Minute: 0, 7,5, 15, 22,5, 30, 37,5, 45, 52,5
+ Uhrzeit Ende 1 Byte: 5 Bit Stunde, 3 Minute
+ Temperatur: 8 Bit, 2 Bit Nachkomma, nur positiv
+
+
+Zeitprogrammierung Antwort:
+ Zeitprogrammierung
+ 1 Byte Programmplatz 
+
+Zeitprogrammierung Anforderung:
+ leer
+
+Zeitprogrammierung löschen:
+ 1 Byte Programmplatz
+
+
+setze Uhrzeit:
+ Wochentag ( 3 Bit), Stunde (5 Bit)
+ Minute (8 Bit)
+
+Heizbefehl:
+ 8 Bit Temperatur (siehe Zeitprogrammierung)
+ 1 Byte Aus-Uhrzeit: 5 Bit Stunde, 3 Bit Minute; Stunden > 23 haben extra bedeutung: 
+        24: Verändere Soll-Temperatur der aktuellen Programmierung ohne weitere Daten zu ändern.
+
+setze Ruhetemperatur:
+ 8 Bit Temperatur (siehe Zeitprogrammierung) - diese Temperatur wird nach einem STOP-Programm eingestellt, bis das nächste START Programm folgt.
+
+
+
+
+
+
+
+
+Programmauswahl:
+Bei erreichen einer Uhrzeit, welche als Startzeit für ein Programm eingestellt ist, wird dieses geladen. Existieren mehrere solcher Programme, ist das mit dem niedrigsten Programmplatz an der Reihe.
