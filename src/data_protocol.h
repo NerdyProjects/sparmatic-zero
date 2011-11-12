@@ -8,6 +8,13 @@
 #ifndef DATA_PROTOCOL_H_
 #define DATA_PROTOCOL_H_
 
+/* this protocol definition is not meant to be compiled.
+ * It can be though but take care:
+ * a) all structs should be packed
+ * b) the big message data union is not a union. just insert the actual data type there
+ * c) bit fields begin with the MSB first
+ */
+
 enum MESSAGE_TYPE {
 	MSG_ACK,	/* Empty Message, just dst type and crc */
 	MSG_THERMOSTAT_INFO, /* regular message from thermostat to base */
