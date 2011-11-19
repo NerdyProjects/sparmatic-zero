@@ -52,7 +52,7 @@ TARGET = main
 
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = $(TARGET).c
+SRC = $(TARGET).c lcd.c keys.c ntc.c motor.c
 
 
 # List Assembler source files here.
@@ -110,6 +110,7 @@ CFLAGS += -Wa,-adhlns=$(<:.c=.lst)
 CFLAGS += $(patsubst %,-I%,$(EXTRAINCDIRS))
 CFLAGS += $(CSTANDARD)
 CFLAGS += -DF_OSC=$(F_OSC)
+CFLAGS += -DF_CPU=$(F_OSC)
 
 
 

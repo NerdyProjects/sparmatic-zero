@@ -1,127 +1,124 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#define F_CPU (F_OSC)
-
+#include <avr/sleep.h>
 #include <util/delay.h>
 
-#define NTC_PORT PORTF
-#define NTC_DDR DDRF
-#define NTC_PIN (PF3)
 
-#define MOTOR_PORT PORTE
-#define MOTOR_DDR DDRE
-#define MOTOR_PIN_L PE7
-#define MOTOR_PIN_R PE6
+#include "lcd.h"
+#include "keys.h"
+#include "ntc.h"
+#include "motor.h"
 
-#define MOTOR_SENSE_DDR DDRE
-#define MOTOR_SENSE_PORT PORTE
-#define MOTOR_SENSE_PIN PE2
-
-#define SWITCH_PORT PORTB
-#define SWITCH_PIN PINB
-#define SWITCH_DDR DDRB
-#define SWITCH_PLUS PB0
-#define SWITCH_MINUS PB7
-#define SWITCH_MENU PB5
-#define SWITCH_OK PB6
-#define SWITCH_CLOCK PB4
-#define SWITCH_ALL ((1 << SWITCH_PLUS) | (1 << SWITCH_MINUS) | (1 << SWITCH_CLOCK) | (1 << SWITCH_MENU) | (1 << SWITCH_OK))
-
-#define ADC_CH_MOTOR (2)
-#define ADC_CH_NTC (1)
-#define ADC_CH_MOTOR_SENSE (0)
 #define ADC_CH_BAT (14)
 
 
 #define SLEEP_POWERSAVE ((1 << SM1) | (1 << SM0))
 #define SLEEP SLEEP_POWERSAVE
 
-enum IRFlags {FLAG_KEY_PRESSED = 1};
+#define POWERLOSS_PORTIN PINE
+#define POWERLOSS_PIN PE0
 
-volatile uint8_t KeysPressed;
-volatile uint8_t Flags;
+static void sysShutdown(void);
 
 ISR(PCINT1_vect)
 {
-  /* This is crap :) */
-  uint8_t keys = SWITCH_PIN;
-  _delay_ms(10);
-  keys |= SWITCH_PIN;
-  keys = ~keys;
-  KeysPressed = keys;
-  Flags |= FLAG_KEY_PRESSED;
+/* used for waking up the device */
+	LCDCRA |= (1 << LCDIE);
 }
 
-void sysSleep(void)
+extern volatile uint8_t key_state;
+/* occurs at each new LCD frame , ~128 ms*/
+ISR(LCD_vect)
 {
-  SMCR = SLEEP | (1 << SE);
+	static uint32_t icnt = 0;
+	static uint8_t cnt = 0;
+	icnt ++;
+	displayBargraph(icnt);
+	keyPeriodicScan();
+	if(key_state & KEY_ALL)
+		cnt = 0;
+	else
+		cnt ++;
+
+	if(cnt > 4)
+	{
+		cnt = 0;
+		LCDCRA &= ~(1 << LCDIE);	/* disable LCD Interrupt when keys are handled */
+	}
+}
+
+ISR(PCINT0_vect)
+{
+	displaySymbols(LCD_TOWER, LCD_TOWER);
+	/* emergency wakeup on power loss, motor step counter */
+	if(POWERLOSS_PORTIN & (1 << POWERLOSS_PIN))
+		sysShutdown();
+
+	/* any other case is motor step */
+	motorStep();
+}
+
+static void sysShutdown(void)
+{
+	lcdOff();
+}
+
+static void sysSleep(void)
+{
   ADCSRA &= (1 << ADEN);		// Disable ADC
-  // execute sleep *TODO*
+  displaySymbols(LCD_BATTERY, LCD_BATTERY);
+  sleep_mode();
+  displaySymbols(0, LCD_BATTERY);
 }
 
 void pwrInit(void)
 {
-  PRR = (1 << PRTIM1) | (1 << PRSPI) | (1 << PRUSART0); // disable some hardware
+  PRR = (1 << PRTIM1) | (1 << PRSPI); // | (1 << PRUSART0); // disable some hardware
+  set_sleep_mode(SLEEP_MODE_PWR_SAVE);
+  PCMSK0 |= (1 << PCINT0);	/* emergency power loss IRQ */
+  EIMSK |= (1 << PCIE0);
 }
 
 void ioInit(void)
 {
-  NTC_DDR |= (1 << NTC_PIN);
- 
-  MOTOR_PORT &= (1 << MOTOR_PIN_L) | (1 << MOTOR_PIN_R);
-  MOTOR_DDR = (1 << MOTOR_PIN_L) | (1 << MOTOR_PIN_R);
-  
-  MOTOR_SENSE_DDR = (1 << MOTOR_SENSE_PIN);
-
-  SWITCH_PORT = SWITCH_ALL; // Pullups
-  
-}
-
-void buttonInit(void)
-{
-  EIMSK |= PCIE1;	//PC-INT 8..15
-  PCMSK1 |= SWITCH_ALL; // Enable all switches PC-INT
+  DIDR0 = 0xFF;	/* Disable digital inputs on Port F */
 }
 
 
-void lcdInit(void)
-{
-LCDCRB = (1<<LCDCS)|(0<<LCD2B)|(1<<LCDMUX1)|(1<<LCDMUX0)|(1<<LCDPM2)|(1<<LCDPM1)|(1<<LCDPM0);
-/*
-      (1<<LCDCS)                            // Das LCD wird im asynchronen Modus (LCDCS-Bit=1)
-                                               mit der Frequenz des Quarzes TOSC1 = 32.768Hz als LCD Clock betrieben.
-      |(0<<LCD2B)                           // 1/3 bias is used
-      |(1<<LCDMUX1)|(1<<LCDMUX0)            // 1/4 Duty; COM0:3;
-      |(1<<LCDPM2)|(1<<LCDPM1)|(1<<LCDPM0); // SEG0:24
-*/
- 
-LCDFRR = (0<<LCDPS2)|(0<<LCDPS1)|(0<<LCDPS0)|(0<<LCDCD2)|(0<<LCDCD1)|(1<<LCDCD0);
-/*
-      (0<<LCDPS2)|(0<<LCDPS1)|(0<<LCDPS0)    // N = 16
-      |(0<<LCDCD2)|(0<<LCDCD1)|(1<<LCDCD0);  // D = 2
-      // ergo f(frame) = 128Hz
-      eventuell D=1, N=64 (LCDCD0 = 0) LCDPS0=1 für 64 Hz, ausprobieren
-*/
- 
-LCDCCR = (1<<LCDDC2)|(0<<LCDDC1)|(0<<LCDDC0)|(/*config.lcd_contrast*/ 10 << LCDCC0);
-/*
-      (1<<LCDDC2)|(0<<LCDDC1)|(0<<LCDDC0)   // 575 µs
-      // 3,1V
-      |(config.lcd_contrast << LCDCC0);     // Set the initial LCD contrast level
-*/
- 
-LCDCRA = (1<<LCDEN)|(1<<LCDAB)|(0<<LCDIE)|(0<<LCDBL);
-/*
-      (1<<LCDEN)    // Enable LCD
-      |(1<<LCDAB)   // Low Power Waveform
-      |(0<<LCDIE)   // disable Interrupt
-      |(0<<LCDBL);  // No Blanking
-*/
-}
 
 void adcInit(void)
 {
-  ADCSRA = (1 << ADPS2) | (1 << ADEN);	// Fclk/16
+  ADCSRA = (1 << ADPS2);	// Fclk/16
   ADMUX = (1 << REFS0);
 }
 
+int main(void)
+{
+	int16_t i = 0;
+	ASSR |= (1 << AS2);
+	pwrInit();
+	ioInit();
+	motorInit();
+	lcdInit();
+	keyInit();
+	adcInit();
+	ntcInit();
+	displayAsciiDigit('H', 0);
+	displayAsciiDigit('A', 1);
+	displayAsciiDigit('L', 2);
+	displayAsciiDigit('O', 3);
+	sei();
+
+	while(1)
+	{
+		if (get_key_press(1 << KEY_PLUS)) {
+			motorStepOpen();
+		}
+		if (get_key_press(1 << KEY_MINUS)) {
+			motorStepClose();
+		}
+
+		displaySymbols(key_state, KEY_ALL);
+		sysSleep();
+	}
+}

@@ -93,6 +93,7 @@ union MSG_DATA {
 struct MESSAGE {
 	/* 0: broadcast, 1: master, 2-n: slave */
 	unsigned char destination;
+	unsigned char source;
 	enum MESSAGE_TYPE type;
 	/* directly use type! sizeof(union) is biggest member */
 	union MSG_DATA data;
@@ -117,8 +118,15 @@ struct MESSAGE {
 	 */
 	unsigned short crc;
 
-
-
 };
+
+#pragma packed
+struct PACKET_HEADER {
+	uint8_t destination;
+	uint8_t source;
+	enum MESSAGE_TYPE type;
+	uint16_t crc;
+};
+// #pragma unpacked
 
 #endif /* DATA_PROTOCOL_H_ */

@@ -29,34 +29,25 @@
 
 #include <avr/io.h>
 
-// Mirf settings
-#define mirf_CH         2
-#define mirf_PAYLOAD    16
-#define mirf_CONFIG     ( (1<<MASK_RX_DR) | (1<<EN_CRC) | (0<<CRCO) )
-
 // Pin definitions for chip select and chip enabled of the MiRF module
-#define CE  PB0
-#define CSN PB1
+#define IRQ_MODE_PINCHANGE0
+/* #define IRQ_MODE_PINCHANGE2 */
+/* #define IRQ_MODE_INT0 */
+#define CE_PORT		PORTF
+#define CSN_PORT	PORTE
+#define CE_DDR		DDRF
+#define CSN_DDR		DDRE
+#define IRQ_DDR		DDRE
+#define IRQ_PORT	PORTE
+#define IRQ_PIN		PE4
+#define CE  PF7
+#define CSN PE3
 
 // Definitions for selecting and enabling MiRF module
-#define mirf_CSN_hi     PORTB |=  (1<<CSN);
-#define mirf_CSN_lo     PORTB &= ~(1<<CSN);
-#define mirf_CE_hi      PORTB |=  (1<<CE);
-#define mirf_CE_lo      PORTB &= ~(1<<CE);
+#define mirf_CSN_hi     CSN_PORT |=  (1<<CSN);
+#define mirf_CSN_lo     CSN_PORT &= ~(1<<CSN);
+#define mirf_CE_hi      CE_PORT |=  (1<<CE);
+#define mirf_CE_lo      CE_PORT &= ~(1<<CE);
 
-// Public standart functions
-extern void mirf_init();
-extern void mirf_config();
-extern void mirf_send(uint8_t * value, uint8_t len);
-extern void mirf_set_RADDR(uint8_t * adr);
-extern void mirf_set_TADDR(uint8_t * adr);
-extern uint8_t mirf_data_ready();
-extern void mirf_get_data(uint8_t * data);
-
-
-// Public extended functions
-extern void mirf_config_register(uint8_t reg, uint8_t value);
-extern void mirf_read_register(uint8_t reg, uint8_t * value, uint8_t len);
-extern void mirf_write_register(uint8_t reg, uint8_t * value, uint8_t len);
 
 #endif /* _MIRF_H_ */

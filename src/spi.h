@@ -31,9 +31,16 @@
 
 
 extern void spi_init();
-extern void spi_transfer_sync (uint8_t * dataout, uint8_t * datain, uint8_t len);
-extern void spi_transmit_sync (uint8_t * dataout, uint8_t len);
-extern uint8_t spi_fast_shift (uint8_t data);
+extern void spi_rw (uint8_t * dataout, uint8_t * datain, uint8_t len);
+extern void spi_w (uint8_t * dataout, uint8_t len);
+
+static inline uint8_t spi_rw1 (uint8_t data)
+// Clocks only one byte to target device and returns the received one
+{
+    SPDR = data;
+    while((SPSR & (1<<SPIF))==0);
+    return SPDR;
+}
 
 
 #endif /* _SPI_H_ */

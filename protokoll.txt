@@ -25,6 +25,7 @@ Situationsbedingt:
 Nachrichtenformat:
 Adresse, Typ der Nachricht, Nachrichtentypspezifische Daten, Checksumme 
 Adresse - 8 Bit
+Absender - 8 Bit
 Typ - 8 Bit
 Daten - variabel
 Checksumme - CRC-CCITT (16 Bit; HD 4 bis 4kByte Daten sichere Erkennung von 1- und 2 Bit fehlern)
@@ -79,3 +80,10 @@ setze Ruhetemperatur:
 
 Programmauswahl:
 Bei erreichen einer Uhrzeit, welche als Startzeit für ein Programm eingestellt ist, wird dieses geladen. Existieren mehrere solcher Programme, ist das mit dem niedrigsten Programmplatz an der Reihe.
+
+
+Fehlt: Absender!
+
+Überschlagsrechnung:
+15 mA @ receive, 100 ms receive nach jedem Senden (Dort ist dann das Senden schon mit drin, vernachlässigbar)
+ergibt ~ 220 mAh / Jahr bei 1x pro Minute. Das ist 1/10 der Batteriekapazität.
