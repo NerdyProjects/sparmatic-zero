@@ -20,13 +20,20 @@
 
 static void sysShutdown(void);
 
+volatile uint32_t SystemTimeSeconds;
+
+ISR(TIMER2_OVF_vect)
+{
+	/* used for waking up the device periodically */
+	SystemTimeSeconds += 8;
+}
+
 ISR(PCINT1_vect)
 {
-/* used for waking up the device */
+/* used for waking up the device by key press*/
 	LCDCRA |= (1 << LCDIE);
 }
 
-extern volatile uint8_t key_state;
 /* occurs at each new LCD frame , ~128 ms*/
 ISR(LCD_vect)
 {
@@ -58,6 +65,7 @@ ISR(PCINT0_vect)
 	motorStep();
 }
 
+
 static void sysShutdown(void)
 {
 	lcdOff();
@@ -65,8 +73,11 @@ static void sysShutdown(void)
 
 static void sysSleep(void)
 {
+	OCR2A = 0;
   ADCSRA &= (1 << ADEN);		// Disable ADC
   displaySymbols(LCD_BATTERY, LCD_BATTERY);
+  while(ASSR & (1 << OCR2UB))	/* wait at least one asynchronous clock cycle for interrupt logic to reset */
+	  ;
   sleep_mode();
   displaySymbols(0, LCD_BATTERY);
 }
@@ -92,10 +103,22 @@ void adcInit(void)
   ADMUX = (1 << REFS0);
 }
 
+void timerInit(void)
+{
+	ASSR |= (1 << AS2);
+	TCCR2A = (1 << CS20) | (1 << CS21) | (1 << CS22);	/* normal mode, 32768/1024 = 32 Hz, 1/8 Hz Interrupt rate */
+	TCNT2 = 0;
+	OCR2A = 0;
+	while(ASSR & ((1 << TCN2UB) | (1 << OCR2UB) | (1 << TCR2UB)))
+		;
+	TIFR2 = (1 << OCF2A) | (1 << TOV2);
+	TIMSK2 = (1 << TOIE2);
+}
+
 int main(void)
 {
 	int16_t i = 0;
-	ASSR |= (1 << AS2);
+	timerInit();
 	pwrInit();
 	ioInit();
 	motorInit();
@@ -121,4 +144,6 @@ int main(void)
 		displaySymbols(key_state, KEY_ALL);
 		sysSleep();
 	}
+
+	return -1;
 }
