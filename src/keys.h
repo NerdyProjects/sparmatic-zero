@@ -29,10 +29,9 @@
 #define KEY_PORT        PORTB
 #define KEY_PIN         PINB
 
-#define REPEAT_MASK     (1<<KEY_PLUS | 1<<KEY_MINUS)       // repeat: key1, key2
+#define REPEAT_MASK     KEY_ALL       // repeat: key1, key2
 #define REPEAT_START    30                        // after N scans
 #define REPEAT_NEXT     9                        // every M scans
-
 
 void keyInit(void);
 void keyPeriodicScan(void);
