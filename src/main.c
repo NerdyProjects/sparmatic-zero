@@ -20,8 +20,6 @@
 #define POWERLOSS_PIN PE0
 
 static void sysShutdown(void);
-static volatile uint8_t MotorStepTimes[256];
-static volatile uint8_t MotorStepWrite;
 
 ISR(PCINT1_vect)
 {
@@ -53,12 +51,11 @@ ISR(LCD_vect)
 ISR(PCINT0_vect)
 {
 	/* emergency wakeup on power loss, motor step counter */
-	if(POWERLOSS_PORTIN & (1 << POWERLOSS_PIN))
-		sysShutdown();
+	/*if(POWERLOSS_PORTIN & (1 << POWERLOSS_PIN))
+		sysShutdown(); */
 
 	/* any other case is motor step */
-	if(motorStep())
-		MotorStepTimes[MotorStepWrite++] = TCNT0;
+	motorStep();
 }
 
 
@@ -92,25 +89,14 @@ void ioInit(void)
   DIDR0 = 0xFF;	/* Disable digital inputs on Port F */
 }
 
-
-
-void adcInit(void)
-{
-  ADCSRA = (1 << ADPS2);	// Fclk/16
-  ADMUX = (1 << REFS0);
-}
-
 int main(void)
 {
-	uint8_t motorStepRead = 0;
-	uint8_t flag = 1;
 	timerInit();
 	pwrInit();
 	ioInit();
 	motorInit();
 	lcdInit();
 	keyInit();
-	adcInit();
 	ntcInit();
 	displayAsciiDigit('H', 0);
 	displayAsciiDigit('A', 1);
@@ -126,29 +112,8 @@ int main(void)
 		if (get_key_press(1 << KEY_MINUS)) {
 			motorStepClose();
 		}
-		if(get_key_short(1 << KEY_MENU)) {
-			++motorStepRead;
-			flag = 1;
-		}
 		if(get_key_long(1 << KEY_MENU)) {
 			motorDetectFullOpen();
-		}
-		if(get_key_press(1 << KEY_CLOCK)) {
-			--motorStepRead;
-			flag = 1;
-		}
-		if(get_key_press(1 << KEY_OK)) {
-			for(motorStepRead = 0; motorStepRead < 255; motorStepRead++)
-				MotorStepTimes[motorStepRead] = 0;
-			motorStepRead = 0;
-			MotorStepWrite = 0;
-			flag = 1;
-		}
-		if(flag) {
-			flag = 0;
-			displayBargraph(motorStepRead);
-			displayString("....");
-			displayNumber(MotorStepTimes[motorStepRead]);
 		}
 
 		sysSleep();

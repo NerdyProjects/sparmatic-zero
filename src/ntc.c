@@ -52,7 +52,7 @@ uint16_t getNtcAdc(void)
 {
 	NTC_PORT |= (1 << NTC_PIN);
 	ADMUX = (1 << REFS0) | (ADC_CH_NTC);
-	ADCSRA |= (1 << ADEN) | (1 << ADSC);
+	ADCSRA = (1 << ADEN) | (1 << ADSC) | (1 << ADPS2);
 	while(ADCSRA & (1 << ADSC))
 		;
 	NTC_PORT &= ~(1 << NTC_PIN);
