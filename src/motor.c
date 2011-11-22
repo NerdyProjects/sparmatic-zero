@@ -28,7 +28,8 @@
 
 #define ADC_CH_MOTOR (2)
 #define ADC_CH_MOTOR_SENSE (0)
-
+#define MOTOR_DIR_OUT (MOTOR_DDR |= (1 << MOTOR_PIN_L) | (1 << MOTOR_PIN_R))
+#define MOTOR_DIR_IN (MOTOR_DDR &= ~(1 << MOTOR_PIN_L) | (1 << MOTOR_PIN_R))
 #define MOTOR_STOP (MOTOR_PORT &= ~((1 << MOTOR_PIN_L) | (1 << MOTOR_PIN_R)))
 #define MOTOR_OPEN (MOTOR_PORT |= (1 << MOTOR_PIN_L))
 #define MOTOR_CLOSE (MOTOR_PORT |= (1 << MOTOR_PIN_R))
@@ -44,23 +45,36 @@
 
 /* hardcoded blocking current limit. Currents are in ADC digits.
  * For real current the formular is as follows:
- * I = (1024 - ADCval) * Ubat / 2.2
- * The loaded motor behaves very much resistive so Ubat can be eliminated. Result wont be
- * a current but an indicator for motor load. */
-#define MOTOR_CURRENT_BLOCK 940
+ * I = (1024 - ADCval) * Ubat / 2.2 */
+#define MOTOR_CURRENT_BLOCK 930
+/* harder limit for detecting open end position */
+#define MOTOR_CURRENT_BLOCK_OPEN 950
 /* minimum change in current to detect valve */
 #define MOTOR_CURRENT_VALVE_DETECT 5
 /* all speeds are given in ms per tick.
  * A tick is a period on motor sense pin: LH for Forward, HL for Backwards.
  */
 /* block: Stop if no pulse is received in that interval */
-#define MOTOR_SPEED_BLOCK 95
+#define MOTOR_SPEED_BLOCK 110
+/* faster turn off at open end position */
+#define MOTOR_SPEED_BLOCK_OPEN 60
+
+#define MOTOR_POSITION_MAX 380
+
+typedef enum {STOP_NULL = 0, STOP_TIMEOUT = 1, STOP_CURRENT = 2, STOP_POSITION = 4} MOTOR_STOP_SOURCE;
+
+volatile static uint8_t MotorStopSource;
 
 volatile static int8_t Direction = 0;
+volatile static uint8_t PWM;
 volatile static int16_t MotorPosition = 0;
+static int16_t PositionValveOpen;
+static int16_t PositionValveClosed;
+
 /* used as stop condition, initialized to very slow speed stop/block stop */
 static uint8_t MotorTimeout = 95;
 static uint16_t CurrentLimit = 940;
+
 
 /* Motorgeschwindigkeit Leerlauf ~ 70-90 Schritte pro Sekunde
  * Motorgeschwindigkeit Last ~40-80 Schritte pro Sekunde
@@ -72,7 +86,6 @@ static uint16_t CurrentLimit = 940;
 void motorInit(void)
 {
 	  MOTOR_PORT &= ~((1 << MOTOR_PIN_L) | (1 << MOTOR_PIN_R));
-	  MOTOR_DDR |= (1 << MOTOR_PIN_L) | (1 << MOTOR_PIN_R);
 
 	  MOTOR_SENSE_DDR |= (1 << MOTOR_SENSE_LED_PIN);
 	  PCMSK0 |= (1 << PCINT1);
@@ -90,18 +103,26 @@ static uint16_t getCurrent(void)
 void motorStopMove(void)
 {
 	disableTimeout();
-	displaySymbols(LCD_AUTO, LCD_AUTO);
 	MOTOR_STOP;
+	MOTOR_DIR_IN;
 	_delay_ms(800);
 	MOTOR_SENSE_OFF;
 	Direction = DIR_STOP;
+}
+
+void motorStopTimeout(void)
+{
+	MotorStopSource |= STOP_TIMEOUT;
+	motorStopMove();
 }
 
 static void motorMove(int8_t dir)
 {
 	MOTOR_SENSE_ON;
 	MOTOR_STOP;
-	enableTimeout(motorStopMove, 255);	/* first timeout long to allow startup */
+	MOTOR_DIR_OUT;
+	MotorStopSource = STOP_NULL;
+	enableTimeout(motorStopTimeout, 255);	/* first timeout long to allow startup */
 	switch(dir)
 	{
 	case DIR_OPEN:
@@ -115,6 +136,7 @@ static void motorMove(int8_t dir)
 		break;
 	}
 	Direction = dir;
+	PWM = 0;
 	MOTOR_TIMER_START;
 }
 
@@ -146,27 +168,44 @@ void motorStepClose(void)
 /*
  * Fully opens the motor to detect end position. Closes until it detects touching the vent.
  */
-void motorDetectFullOpen(void)
+uint8_t motorAdapt(void)
 {
 	uint16_t currentNormal;
-	int16_t positionValveOpen;
-	MotorTimeout = MOTOR_SPEED_BLOCK;
-	CurrentLimit = MOTOR_CURRENT_BLOCK;
+
+	MotorTimeout = MOTOR_SPEED_BLOCK_OPEN;
+	CurrentLimit = MOTOR_CURRENT_BLOCK_OPEN;
+	MotorPosition = 0;
 	motorMove(DIR_OPEN);
 	while(motorIsRunning())
 		;
-	MotorPosition = 1000;
+	MotorPosition = MOTOR_POSITION_MAX;
+	if(MotorStopSource & STOP_POSITION)
+		return 1;
+
+	MotorTimeout = MOTOR_SPEED_BLOCK;
+	CurrentLimit = MOTOR_CURRENT_BLOCK;
+
 	motorMove(DIR_CLOSE);
-	while(MotorPosition > 990)
+	while(motorIsRunning() && MotorPosition > MOTOR_POSITION_MAX - 11)
 		;
 	currentNormal = getCurrent();
-	while(motorIsRunning() && MotorPosition > 300 && getCurrent() > (currentNormal - MOTOR_CURRENT_VALVE_DETECT))
-				;
-	positionValveOpen = MotorPosition;
 
-	motorStopMove();
-	displayString("...");
-	displayNumber(positionValveOpen);
+	while(motorIsRunning() && getCurrent() > (currentNormal - MOTOR_CURRENT_VALVE_DETECT))
+				;
+	PositionValveOpen = MotorPosition;
+
+	if(!motorIsRunning())
+		return 2;
+
+	while(motorIsRunning())
+		;
+
+	PositionValveClosed = MotorPosition;
+
+	if (MotorStopSource & STOP_POSITION)
+		return 3;
+
+	return 0;
 }
 
 /**
@@ -178,6 +217,10 @@ uint8_t motorStep(void)
 	if(((Direction == DIR_OPEN) && state) || ((Direction == DIR_CLOSE) && !state)) {
 		setTimeout(MotorTimeout);
 		MotorPosition += Direction;
+		if(MotorPosition < 0 || MotorPosition > MOTOR_POSITION_MAX) {
+			MotorStopSource |= STOP_POSITION;
+			motorStopMove();
+		}
 		return 1;
 	}
 	return 0;
@@ -194,9 +237,29 @@ uint8_t motorIsRunning(void)
  */
 void motorTimer(void)
 {
-	uint16_t current = getCurrent();
-	if(current < CurrentLimit) {
-		displaySymbols(LCD_MANU, LCD_MANU);
-		motorStopMove();
+	if(motorIsRunning()) {
+		uint16_t current = getCurrent();
+		if(current < CurrentLimit) {
+			MotorStopSource |= STOP_CURRENT;
+			motorStopMove();
+		} else {
+			if(PWM == 0) {
+				switch(Direction)
+					{
+					case DIR_OPEN:
+						MOTOR_OPEN;
+						break;
+					case DIR_CLOSE:
+						MOTOR_CLOSE;
+						break;
+					default:
+						break;
+					}
+				PWM = 0;
+			} else {
+				MOTOR_STOP;
+				++PWM;
+			}
+		}
 	}
 }

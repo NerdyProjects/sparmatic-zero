@@ -13,7 +13,7 @@ void motorInit(void);
 void motorStepOpen(void);
 void motorStepClose(void);
 uint8_t motorStep(void);
-void motorDetectFullOpen(void);
+uint8_t motorAdapt(void);
 uint8_t motorIsRunning(void);
 void motorTimer(void);
 

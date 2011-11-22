@@ -51,8 +51,8 @@ ISR(LCD_vect)
 ISR(PCINT0_vect)
 {
 	/* emergency wakeup on power loss, motor step counter */
-	/*if(POWERLOSS_PORTIN & (1 << POWERLOSS_PIN))
-		sysShutdown(); */
+	if(POWERLOSS_PORTIN & (1 << POWERLOSS_PIN))
+		sysShutdown();
 
 	/* any other case is motor step */
 	motorStep();
@@ -106,14 +106,15 @@ int main(void)
 
 	while(1)
 	{
-		if (get_key_press(1 << KEY_PLUS)) {
-			motorStepOpen();
-		}
-		if (get_key_press(1 << KEY_MINUS)) {
-			motorStepClose();
-		}
 		if(get_key_long(1 << KEY_MENU)) {
-			motorDetectFullOpen();
+			uint8_t err;
+			displaySymbols(LCD_DP, LCD_DP);
+			err = motorAdapt();
+			if(err) {
+				displayNumber(err);
+			} else {
+				displaySymbols(0, LCD_DP);
+			}
 		}
 
 		sysSleep();

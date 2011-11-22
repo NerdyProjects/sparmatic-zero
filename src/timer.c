@@ -72,6 +72,7 @@ void enableTimeout(TimerCallback cbk, uint8_t timeout)
 {
 	TimeoutCallback = cbk;
 	OCR0A = TCNT0 + timeout;
+	TIFR0 |= (1 << OCF0A);
 	TIMSK0 |= (1 << OCIE0A);
 }
 
