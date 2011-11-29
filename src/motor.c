@@ -22,7 +22,6 @@
 #define MOTOR_SENSE_DDR DDRE
 #define MOTOR_SENSE_PORT PORTE
 #define MOTOR_SENSE_PORT_IN PINE
-#define MOTOR_SENSE_PIN PE1
 #define MOTOR_SENSE_LED_PIN PE2
 
 
@@ -147,9 +146,7 @@ void motorStepOpen(void)
 	motorMove(DIR_OPEN);
 	while(key_state & KEY_ALL)
 	{
-		displayString("....");
-		displayNumber(getCurrent());
-		_delay_ms(50);
+
 	}
 	motorStopMove();
 }
@@ -158,9 +155,7 @@ void motorStepClose(void)
 {
 	motorMove(DIR_CLOSE);
 	while (key_state & KEY_ALL) {
-		displayString("....");
-		displayNumber(getCurrent());
-		_delay_ms(50);
+
 	}
 	motorStopMove();
 }

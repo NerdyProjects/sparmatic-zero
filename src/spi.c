@@ -55,7 +55,7 @@ void spi_init()
 
 }
 
-void spi_rw(uint8_t * dataout, uint8_t * datain, uint8_t len)
+void spi_rw(const uint8_t * dataout, uint8_t * datain, uint8_t len)
 // Shift full array through target device
 {
 	uint8_t i;
@@ -64,7 +64,7 @@ void spi_rw(uint8_t * dataout, uint8_t * datain, uint8_t len)
 	}
 }
 
-void spi_w(uint8_t * dataout, uint8_t len)
+void spi_w(const uint8_t * dataout, uint8_t len)
 // Shift full array to target device without receiving any byte
 {
 	uint8_t i;

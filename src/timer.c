@@ -64,7 +64,7 @@ void timerInit(void)
 	TIFR2 = (1 << OCF2A) | (1 << TOV2);
 	TIMSK2 = (1 << TOIE2);
 
-	TCCR0A = (1 << CS00) | (1 << CS02);
+	TCCR0A = (1 << CS00) | (1 << CS02);	/* CLK / 1024 -> 1ms */
 	TIMSK0 = (1 << TOIE0);
 }
 

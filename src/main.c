@@ -4,11 +4,14 @@
 #include <util/delay.h>
 
 
+#include "nRF24L01_ll.h"
+#include "funk.h"
 #include "lcd.h"
 #include "keys.h"
 #include "ntc.h"
 #include "motor.h"
 #include "timer.h"
+#include "nRF24L01.h"
 
 #define ADC_CH_BAT (14)
 
@@ -48,20 +51,35 @@ ISR(LCD_vect)
 	}
 }
 
+#define PCINT0_PORTIN PINE
 ISR(PCINT0_vect)
 {
+	static unsigned char lastState = 0;
+	unsigned char newState = PCINT0_PORTIN;
+	unsigned char changed = newState ^ lastState;
+	lastState = newState;
+
 	/* emergency wakeup on power loss, motor step counter */
 	if(POWERLOSS_PORTIN & (1 << POWERLOSS_PIN))
 		sysShutdown();
 
+	if(~newState & changed & (1 << IRQ_PIN))
+	{
+		/* this may happen more often than the real IRQ */
+		nRF24L01_IRQ();
+	}
+
 	/* any other case is motor step */
-	motorStep();
+	if(changed & (1 << MOTOR_SENSE_PIN))
+	{
+		motorStep();
+	}
 }
 
 
 static void sysShutdown(void)
 {
-	lcdOff();
+	//lcdOff();
 }
 
 static void sysSleep(void) {
@@ -98,6 +116,7 @@ int main(void)
 	lcdInit();
 	keyInit();
 	ntcInit();
+	funkInit(10);
 	displayAsciiDigit('H', 0);
 	displayAsciiDigit('A', 1);
 	displayAsciiDigit('L', 2);
@@ -117,7 +136,11 @@ int main(void)
 			}
 		}
 
-		sysSleep();
+		_delay_ms(2000);
+		displaySymbols(LCD_TOWER, LCD_TOWER);
+		txPacket(0, MSG_ACK, 0);
+		displaySymbols(0, LCD_TOWER);
+		//sysSleep();
 	}
 
 	return -1;

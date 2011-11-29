@@ -39,9 +39,10 @@
 #define CSN_DDR		DDRE
 #define IRQ_DDR		DDRE
 #define IRQ_PORT	PORTE
-#define IRQ_PIN		PE4
+#define IRQ_PORT_IN	PINE
+#define IRQ_PIN		PE3	/* INTERRUPT WECHSELN! WAR PE4 todo */
 #define CE  PF7
-#define CSN PE3
+#define CSN PE4
 
 // Definitions for selecting and enabling MiRF module
 #define mirf_CSN_hi     CSN_PORT |=  (1<<CSN);
@@ -49,5 +50,7 @@
 #define mirf_CE_hi      CE_PORT |=  (1<<CE);
 #define mirf_CE_lo      CE_PORT &= ~(1<<CE);
 
+
+void _nRF24L01_init(void);
 
 #endif /* _MIRF_H_ */

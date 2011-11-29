@@ -30,9 +30,9 @@
 #include <avr/io.h>
 
 
-extern void spi_init();
-extern void spi_rw (uint8_t * dataout, uint8_t * datain, uint8_t len);
-extern void spi_w (uint8_t * dataout, uint8_t len);
+extern void spi_init(void);
+extern void spi_rw (const uint8_t * dataout, uint8_t * datain, uint8_t len);
+extern void spi_w (const uint8_t * dataout, uint8_t len);
 
 static inline uint8_t spi_rw1 (uint8_t data)
 // Clocks only one byte to target device and returns the received one

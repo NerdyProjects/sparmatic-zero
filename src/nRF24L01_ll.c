@@ -32,7 +32,7 @@
 #include "nRF24L01_ll.h"
 #include "spi.h"
 
-void _nRF24L01_init()
+void _nRF24L01_init(void)
 // Initializes pins and interrupt to communicate with the MiRF module
 // Should be called in the early initializing phase at startup.
 {
@@ -69,6 +69,7 @@ void _nRF24L01_init()
 
 
 
+/*
 #ifdef IRQ_MODE_INT0
 ISR(INT0_vect)
 #endif
@@ -82,3 +83,4 @@ ISR(PCINT0_vect)
 {
     nRF24L01IRQ();
 }
+*/

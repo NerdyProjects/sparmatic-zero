@@ -45,7 +45,29 @@
  */
 static volatile uint8_t TxActive;
 
-static uint8_t nRF24L01_command(uint8_t cmd, uint8_t *data, uint8_t len)
+static void (*rxCallback)(void);
+
+/**
+ *@param cmd command
+ *@param data not modified, only sent
+ */
+static uint8_t nRF24L01_command(uint8_t cmd, const uint8_t *data, uint8_t len)
+{
+	uint8_t sreg;
+	mirf_CSN_lo;
+	sreg = spi_rw1(cmd);
+	if(len > 1)
+		spi_w(data, len);
+	else if(len == 1)
+		spi_rw1(*data);
+	mirf_CSN_hi;
+	return sreg;
+}
+/**
+ *@param cmd command
+ *@param data output and input
+ */
+static uint8_t nRF24L01_commandR(uint8_t cmd, uint8_t *data, uint8_t len)
 {
 	uint8_t sreg;
 	mirf_CSN_lo;
@@ -62,23 +84,22 @@ static uint8_t nRF24L01_read_register(uint8_t reg)
 // Reads an array of bytes from the given start position in the MiRF registers.
 {
 	uint8_t value;
-	nRF24L01_command(R_REGISTER | (REGISTER_MASK & reg), &value, 1);
+	nRF24L01_commandR(R_REGISTER | (REGISTER_MASK & reg), &value, 1);
 	return value;
 }
 
 static void nRF24L01_write_register(uint8_t reg, uint8_t value)
-// Writes an array of bytes into the MiRF registers.
 {
 	nRF24L01_command(W_REGISTER | (REGISTER_MASK & reg), &value, 1);
 }
 
-static void nRF24L01_write_register_long(uint8_t reg, uint8_t *data, uint8_t len)
+static void nRF24L01_write_register_long(uint8_t reg, const uint8_t *data, uint8_t len)
 {
 	nRF24L01_command(W_REGISTER | (REGISTER_MASK & reg), data, len);
 }
 
 
-static void nRF24L01_config()
+static void nRF24L01_config(void)
 // Sets the important registers in the MiRF module and powers the module
 // in receiving mode
 {
@@ -93,8 +114,7 @@ static void nRF24L01_config()
 	nRF24L01_write_register(EN_AA, 0);
 #endif
 
-	uint8_t zero = 0;
-	nRF24L01_write_register(EN_RXADDR, &zero, 1);	/* disable all rx pipes */
+	nRF24L01_write_register(EN_RXADDR, 0);	/* disable all rx pipes */
 	nRF24L01_command(FLUSH_RX, 0, 0);
 	nRF24L01_command(FLUSH_TX, 0, 0);
 	nRF24L01_write_register(STATUS, (1 << RX_DR | (1 << TX_DS) | (1 << MAX_RT)));
@@ -117,7 +137,7 @@ void nRF24L01_init(void)
  * @param pipe Pipe 0 or 1
  * @param addr address of that pipe
  */
-void nRF24L01set_RADDR_01(uint8_t pipe, uint8_t * addr)
+void nRF24L01_set_RADDR_01(uint8_t pipe, const uint8_t * addr)
 // Sets the receiving address
 {
 	nRF24L01_write_register_long(RX_ADDR_P0 + pipe, addr, 5);
@@ -130,7 +150,7 @@ void nRF24L01set_RADDR_01(uint8_t pipe, uint8_t * addr)
  */
 void nRF24L01_set_RADDR(uint8_t pipe, uint8_t addr)
 {
-	nRF24L01_write_register_long(RX_ADDR_P0 + pipe, addr, 1);
+	nRF24L01_write_register(RX_ADDR_P0 + pipe, addr);
 }
 
 /**
@@ -138,7 +158,7 @@ void nRF24L01_set_RADDR(uint8_t pipe, uint8_t addr)
  * Waits for current transmission to complete.
  * @param addr target address
  */
-void nRF24L01_set_TADDR(uint8_t * addr)
+void nRF24L01_set_TADDR(const uint8_t * addr)
 {
     while(TxActive)
     	;
@@ -174,8 +194,9 @@ uint8_t nRF24L01_get_data(uint8_t * data)
     	nRF24L01_command(FLUSH_RX, 0, 0);
     	return 0;
     }
-    nRF24L01_command(R_RX_PAYLOAD, data, len);
+    nRF24L01_commandR(R_RX_PAYLOAD, data, len);
     nRF24L01_write_register(STATUS, (1 << RX_DR));
+    /* todo: datasheet says we shall read FIFO_STATUS to check for more data */
 
     return len;
 }
@@ -184,11 +205,11 @@ uint8_t nRF24L01_get_data(uint8_t * data)
 /**
  * sends a packet to previously defined address.
  * waits for completion of previous packet.
- * @param data data packet
+ * @param data data packet (will be destroyed)!
  * @param len number of bytes
  * @param rxAfterTx switch to RX mode right after transmission
  */
-void nRF24L01_send(uint8_t * data, uint8_t len, uint8_t rxAfterTx)
+void nRF24L01_send(const uint8_t * data, uint8_t len, uint8_t rxAfterTx)
 {
     mirf_CE_lo;
     TX;
@@ -232,10 +253,9 @@ void nRF24L01_IRQ(void)
 		nRF24L01_write_register(CONFIG, (1 << TX_DS));
 	}
 #ifdef RX_CALLBACK
-	if((status & RX_DR) == RX_DR)
+	if((status & RX_DR) == RX_DR && rxCallback)
 	{
-
-
+		rxCallback();
 	}
 #endif
 }
@@ -243,4 +263,9 @@ void nRF24L01_IRQ(void)
 uint8_t nRF24L01_isTransmitting(void)
 {
 	return TxActive;
+}
+
+void nRF24L01_set_rx_callback(void (*f)(void))
+{
+	rxCallback = f;
 }

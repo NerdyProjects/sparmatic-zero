@@ -8,7 +8,7 @@
 #ifndef FUNK_H_
 #define FUNK_H_
 
-static const uint8_t *BroadcastAdr = {0xA7, 0x5B, 0xCD, 0x14};
+static const uint8_t BroadcastAdr[] = {0xA7, 0x5B, 0xCD, 0x14};
 
 typedef enum {
 	MSG_ACK,	/* Empty Message, just dst type and crc */
@@ -22,15 +22,16 @@ typedef enum {
 	MSG_TEMPERATURE_OFF /* temperature on no active program, from base to thermostat */
 } MESSAGE_TYPE;
 
-#pragma packed
+#pragma pack(1)
 struct PACKET_HEADER {
 	uint8_t destination;
 	uint8_t source;
-	enum MESSAGE_TYPE type;
+	MESSAGE_TYPE type;
 	uint16_t crc;
 };
 // #pragma unpacked
 
-
+void funkInit(uint8_t ownAddress);
+void txPacket(uint8_t adr, MESSAGE_TYPE type, uint8_t *data);
 
 #endif /* FUNK_H_ */

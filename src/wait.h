@@ -9,10 +9,10 @@
 #define WAIT_H_
 
 #ifdef __AVR__
-#include <avr/delay.h>
+#include <util/delay.h>
 #define wait10us(x)
 
-static inline waitms(uint8_t ms)
+static inline void waitms(uint8_t ms)
 {
 	while(ms)
 		_delay_ms(1);
