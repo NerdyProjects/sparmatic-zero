@@ -60,7 +60,7 @@ ISR(PCINT0_vect)
 	lastState = newState;
 
 	/* emergency wakeup on power loss, motor step counter */
-	if(POWERLOSS_PORTIN & (1 << POWERLOSS_PIN))
+	if(newState & (1 << POWERLOSS_PIN))
 		sysShutdown();
 
 	if(~newState & changed & (1 << IRQ_PIN))
@@ -109,6 +109,7 @@ void ioInit(void)
 
 int main(void)
 {
+	_delay_ms(50);
 	timerInit();
 	pwrInit();
 	ioInit();
