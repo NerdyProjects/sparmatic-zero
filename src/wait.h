@@ -14,7 +14,7 @@
 
 static inline void waitms(uint8_t ms)
 {
-	while(ms)
+	while(ms--)
 		_delay_ms(1);
 }
 

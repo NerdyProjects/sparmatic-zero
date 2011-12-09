@@ -41,6 +41,7 @@ void _nRF24L01_init(void)
 	mirf_CSN_hi;
 	CE_DDR |= (1 << CE);
     CSN_DDR |= (1 << CSN);
+    IRQ_PORT |= (1 << IRQ_PIN);
 
 
 #ifdef IRQ_MODE_INT0
@@ -52,15 +53,15 @@ void _nRF24L01_init(void)
 #ifdef IRQ_MODE_PINCHANGE0
     // Initialize external interrupt
     IRQ_DDR &= ~(1<<IRQ_PIN);
-    PCMSK0 = (1<<IRQ_PIN);
-    EIMSK  = (1<<PCIE0);
+    PCMSK0 |= (1<<IRQ_PIN);
+    EIMSK  |= (1<<PCIE0);
 #endif
 
 #ifdef IRQ_MODE_PINCHANGE2
     // Initialize external interrupt
     IRQ_DDR &= ~(1<<IRQ_PIN);
-    PCMSK2 = (1<<IRQ_PIN);
-    EIMSK  = (1<<PCIE2);
+    PCMSK2 |= (1<<IRQ_PIN);
+    EIMSK  |= (1<<PCIE2);
 #endif
 
     // Initialize spi module

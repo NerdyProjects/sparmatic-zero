@@ -53,6 +53,9 @@ void spi_init()
 
 	SPSR = (1 << SPI2X); // Double Clock Rate
 
+	if(SPSR & (1 << SPIF))
+		SPDR;	/* Clear SPIF */
+
 }
 
 void spi_rw(const uint8_t * dataout, uint8_t * datain, uint8_t len)

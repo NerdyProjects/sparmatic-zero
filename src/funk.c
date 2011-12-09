@@ -22,7 +22,7 @@ void funkRxDataAvailable(void)
 	readLen = nRF24L01_get_data(rxData);
 
 	readCounter++;
-	displayBargraph(readCounter);
+	//displayBargraph(readCounter);
 	displayNumber(Packet[0]);
 }
 
@@ -57,6 +57,7 @@ void txPacket(uint8_t adr, MESSAGE_TYPE type, uint8_t *data)
 	header.crc = 0;	/* todo */
 
 	headerToPacket(header);
-	nRF24L01_send(Packet, 3, 1);
+	nRF24L01_wakeUp();
+	nRF24L01_send(Packet, 3, 0);
 }
 

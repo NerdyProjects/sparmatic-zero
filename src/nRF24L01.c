@@ -31,6 +31,7 @@
 #include "nRF24L01_ll.h"
 #include "spi.h"
 #include "wait.h"
+#include "lcd.h"
 
 // Defines for setting the MiRF registers for transmitting or receiving mode
 #define TX nRF24L01_write_register(CONFIG, DEF_CONFIG | ( (1<<PWR_UP) | (0<<PRIM_RX) ) )
@@ -75,7 +76,7 @@ static uint8_t nRF24L01_commandR(uint8_t cmd, uint8_t *data, uint8_t len)
 	if(len > 1)
 		spi_rw(data, data, len);
 	else if(len == 1)
-		spi_rw1(*data);
+		*data = spi_rw1(*data);
 	mirf_CSN_hi;
 	return sreg;
 }
@@ -129,6 +130,7 @@ void nRF24L01_init(void)
 {
 	_nRF24L01_init();
 	nRF24L01_config();
+	displayAsciiDigit('0' + (nRF24L01_command(NOP, 0, 0) >> 4), 0);
 }
 
 
@@ -140,7 +142,8 @@ void nRF24L01_init(void)
 void nRF24L01_set_RADDR_01(uint8_t pipe, const uint8_t * addr)
 // Sets the receiving address
 {
-	nRF24L01_write_register_long(RX_ADDR_P0 + pipe, addr, 5);
+	if(pipe < 2)
+		nRF24L01_write_register_long(RX_ADDR_P0 + pipe, addr, 5);
 }
 
 /**
@@ -150,7 +153,14 @@ void nRF24L01_set_RADDR_01(uint8_t pipe, const uint8_t * addr)
  */
 void nRF24L01_set_RADDR(uint8_t pipe, uint8_t addr)
 {
-	nRF24L01_write_register(RX_ADDR_P0 + pipe, addr);
+	if(pipe < 6 && pipe > 1)
+		nRF24L01_write_register(RX_ADDR_P0 + pipe, addr);
+}
+
+void nRF24L01_set_RXPW(uint8_t pipe, uint8_t len)
+{
+	if(pipe < 6)
+		nRF24L01_write_register(RX_PW_P0 + pipe, len);
 }
 
 /**
@@ -187,7 +197,8 @@ uint8_t nRF24L01_get_data(uint8_t * data)
 {
     uint8_t len;
     uint8_t status;
-    status = nRF24L01_command(R_RX_PL_WID, &len, 1);
+    //status = nRF24L01_command(R_RX_PL_WID, &len, 1);
+    len = 32;
 
     if(len > 32)
     {
@@ -212,10 +223,17 @@ uint8_t nRF24L01_get_data(uint8_t * data)
 void nRF24L01_send(const uint8_t * data, uint8_t len, uint8_t rxAfterTx)
 {
     mirf_CE_lo;
+    displayAsciiDigit('0' + (nRF24L01_command(NOP, 0, 0) >> 4), 0);
     TX;
+    displaySymbols(LCD_MANU, LCD_MANU);
 
     while(TxActive)
+    	if(IRQ_PORT_IN & (1 << IRQ_PIN))
+    		displaySymbols((LCD_AUTO), LCD_AUTO);
+    	else
+    		displaySymbols(0, LCD_AUTO);
     	;
+    displaySymbols(0, LCD_MANU);
     nRF24L01_command(W_TX_PAYLOAD, data, len);
 
     mirf_CE_hi;                     // Start transmission
@@ -242,18 +260,20 @@ void nRF24L01_sleep(void)
 
 void nRF24L01_IRQ(void)
 {
+	static uint8_t irqCount = 0;
 	uint8_t status;
 	status = nRF24L01_command(NOP, 0, 0);
-	if((status & TX_DS) == TX_DS)
+	displayBargraph(++irqCount * 2);
+	if(status & (1 << TX_DS))
 	{
 		if(TxActive == 2)
 			RX;
 
 		TxActive = 0;
-		nRF24L01_write_register(CONFIG, (1 << TX_DS));
+		nRF24L01_write_register(STATUS, 1 << TX_DS);
 	}
 #ifdef RX_CALLBACK
-	if((status & RX_DR) == RX_DR && rxCallback)
+	if(status & (1 << RX_DR))
 	{
 		rxCallback();
 	}

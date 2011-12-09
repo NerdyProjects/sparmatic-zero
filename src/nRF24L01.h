@@ -29,10 +29,10 @@
 #define DEF_RF_SETUP ((1 << RF_DR_HIGH) | (3 << RF_PWR))
 
 /* Dynamic Payload Length, Payload with Ack */
-#define DEF_FEATURE ((1 << EN_DPL) | (1 << EN_ACK_PAY))
+#define DEF_FEATURE (0)
 
-/* Dynamic Payload on all data pipes */
-#define DEF_DYNPD ((1 << DPL_P5) | (1 << DPL_P4) | (1 << DPL_P3) | (1 << DPL_P2) | (1 << DPL_P1) | (1 << DPL_P0))
+/* Static Payload on all data pipes */
+#define DEF_DYNPD (0)
 
 
 
