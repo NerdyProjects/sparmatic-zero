@@ -130,7 +130,6 @@ void nRF24L01_init(void)
 {
 	_nRF24L01_init();
 	nRF24L01_config();
-	displayAsciiDigit('0' + (nRF24L01_command(NOP, 0, 0) >> 4), 0);
 }
 
 
@@ -223,9 +222,9 @@ uint8_t nRF24L01_get_data(uint8_t * data)
 void nRF24L01_send(const uint8_t * data, uint8_t len, uint8_t rxAfterTx)
 {
     mirf_CE_lo;
-    displayAsciiDigit('0' + (nRF24L01_command(NOP, 0, 0) >> 4), 0);
+    displayAsciiDigit('0' + (nRF24L01_command(NOP, 0, 0) >> 4), 3);
     TX;
-    displaySymbols(LCD_MANU, LCD_MANU);
+    displaySymbols(LCD_TOWER, LCD_TOWER);
 
     while(TxActive)
     	if(IRQ_PORT_IN & (1 << IRQ_PIN))
@@ -233,7 +232,6 @@ void nRF24L01_send(const uint8_t * data, uint8_t len, uint8_t rxAfterTx)
     	else
     		displaySymbols(0, LCD_AUTO);
     	;
-    displaySymbols(0, LCD_MANU);
     nRF24L01_command(W_TX_PAYLOAD, data, len);
 
     mirf_CE_hi;                     // Start transmission
@@ -270,6 +268,7 @@ void nRF24L01_IRQ(void)
 			RX;
 
 		TxActive = 0;
+		displaySymbols(0, LCD_TOWER);
 		nRF24L01_write_register(STATUS, 1 << TX_DS);
 	}
 #ifdef RX_CALLBACK

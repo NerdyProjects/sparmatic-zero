@@ -54,7 +54,7 @@ ISR(LCD_vect)
 #define PCINT0_PORTIN PINE
 ISR(PCINT0_vect)
 {
-	static unsigned char lastState = 0;
+	static unsigned char lastState = (1 << IRQ_PIN);	// init to defaults
 	unsigned char newState = PCINT0_PORTIN;
 	unsigned char changed = newState ^ lastState;
 	lastState = newState;
@@ -95,7 +95,7 @@ static void sysSleep(void) {
 
 void pwrInit(void)
 {
-  PRR = (1 << PRTIM1) | (1 << PRSPI) | (1 << PRUSART0); // disable some hardware
+  PRR = (1 << PRTIM1) | (1 << PRUSART0); // disable some hardware
   set_sleep_mode(SLEEP_MODE_PWR_SAVE);
   PCMSK0 |= (1 << PCINT0);	/* emergency power loss IRQ */
   DDRE &= ~(1 << PE0);
@@ -109,6 +109,7 @@ void ioInit(void)
 
 int main(void)
 {
+	uint8_t cnt = 0;
 	_delay_ms(50);
 	timerInit();
 	pwrInit();
@@ -137,10 +138,10 @@ int main(void)
 			}
 		}
 
-		_delay_ms(2000);
-		displaySymbols(LCD_TOWER, LCD_TOWER);
-		txPacket(0, MSG_ACK, 0);
-		displaySymbols(0, LCD_TOWER);
+		_delay_ms(700);
+		displayNumber(cnt++);
+		txPacket(cnt, 0, 0);
+
 		//sysSleep();
 	}
 

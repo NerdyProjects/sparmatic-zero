@@ -19,7 +19,7 @@
 #define DEF_CONFIG     ( (1<<EN_CRC) | (0<<CRCO) | (1 << MASK_MAX_RT))	// | (RX_CALLBACK << MASK_RX_DR) )
 
 /* 0.75ms retransmission delay, up to 0 retransmissions */
-#define DEF_SETUP_RETR ((2 << ARD) | (0 << ARC))
+#define DEF_SETUP_RETR ((0 << ARD) | (0 << ARC))
 
 /* Channel Offset in MHz*/
 /* ISM is 2,4-2,5 GHz, WLAN g */

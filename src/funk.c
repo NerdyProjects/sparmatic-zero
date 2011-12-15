@@ -12,7 +12,14 @@ static uint8_t myAddress = 0;
 #define TX_RESENDS 5
 #define TX_ACK_DELAY 100
 
-static uint8_t Packet[32];
+static uint8_t Packet[32] = { 0x10, 0x13, 0x17, 0x1E,
+		0x20, 0x23, 0x27, 0x2E,
+		0x30, 0x33, 0x37, 0x3E,
+		0x40, 0x43, 0x47, 0x4E,
+		0x50, 0x53, 0x57, 0x5E,
+		0x60, 0x63, 0x67, 0x6E,
+		0x70, 0x73, 0x77, 0x7E,
+		0x80, 0x83, 0x87, 0x8E };
 
 void funkRxDataAvailable(void)
 {
@@ -35,6 +42,7 @@ void funkInit(uint8_t ownAddress)
 {
 	nRF24L01_init();
 	nRF24L01_set_RADDR_01(0, BroadcastAdr);
+	nRF24L01_enable_RPIPE(0);
 	nRF24L01_set_TADDR(BroadcastAdr);
 	nRF24L01_set_rx_callback(&funkRxDataAvailable);
 	myAddress = ownAddress;
@@ -56,8 +64,8 @@ void txPacket(uint8_t adr, MESSAGE_TYPE type, uint8_t *data)
 	header.type = type;
 	header.crc = 0;	/* todo */
 
-	headerToPacket(header);
+	Packet[3] = adr;
 	nRF24L01_wakeUp();
-	nRF24L01_send(Packet, 3, 0);
+	nRF24L01_send(Packet, 32, 0);
 }
 
