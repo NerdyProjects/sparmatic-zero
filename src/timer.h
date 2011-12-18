@@ -7,8 +7,7 @@
 
 #ifndef TIMER_H_
 #define TIMER_H_
-
-void timerInit(void);
+#include "timerdef.h"
 
 /*
  * 1/32th second per step.
@@ -17,12 +16,18 @@ void timerInit(void);
  */
 #define timerGet() (TCNT2)
 
-extern volatile uint8_t Timer0H;
+extern const volatile uint8_t Seconds;
+extern const volatile uint8_t Minutes;
+extern const volatile uint8_t Hours;
+extern const volatile uint8_t Weekday;
 
-typedef void (*TimerCallback)(void);
+extern const volatile uint8_t Timer0H;
 
+void timerInit(void);
 void enableTimeout(TimerCallback cbk, uint8_t timeout);
 void setTimeout(uint8_t timeout);
 void disableTimeout(void);
+void setTime(uint8_t weekday, uint8_t hour, uint8_t minute);
+
 
 #endif /* TIMER_H_ */

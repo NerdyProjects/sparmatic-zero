@@ -18,4 +18,8 @@ uint8_t motorAdapt(void);
 uint8_t motorIsRunning(void);
 void motorTimer(void);
 
+const volatile int16_t MotorPosition;
+
+#define getMotorPosition(x) (MotorPosition)
+
 #endif /* MOTOR_H_ */

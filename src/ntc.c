@@ -18,6 +18,7 @@
 #define VOLTAGE_DIVIDER_RES 1200000000UL
 #define NTC_START_DEGREE 0
 #define NTC_DEGREE_STEPS 5
+
 static const uint16_t NtcRes[] = {
 	34090		, //  0°C
 	26310		, //  5°C
@@ -42,6 +43,8 @@ static const uint16_t NtcRes[] = {
 	  	0
 };
 
+int16_t Temperature;
+
 
 void ntcInit(void)
 {
@@ -59,7 +62,7 @@ uint16_t getNtcAdc(void)
 	return ADC;
 }
 
-int16_t getNtcTemperature(void)
+int16_t UpdateNtcTemperature(void)
 {
 	uint16_t ntcVoltage = getNtcAdc();
 	uint16_t ntcRes = VOLTAGE_DIVIDER_RES / (102300000UL / ntcVoltage - 100000);

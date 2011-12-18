@@ -7,8 +7,9 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include "timer.h"
+#include "timerdef.h"
 
+typedef void (*TimerCallback)(void);
 
 static volatile uint8_t Seconds;
 static uint8_t Minutes;
@@ -39,10 +40,10 @@ ISR(TIMER2_OVF_vect)
 		seconds -= 60;
 		Minutes += 1;
 		if(Minutes > 59) {
-			Minutes -= 60;
+			Minutes = 0;
 			Hours += 1;
 			if(Hours > 23) {
-				Hours -= 24;
+				Hours = 0;
 				Weekday += 1;
 				if(Weekday > 6) {
 					Weekday = 0;
@@ -85,4 +86,13 @@ void disableTimeout()
 {
 	TIMSK0 &= ~(1 << OCIE1A);
 	TimeoutCallback = 0;
+}
+
+void setTime(uint8_t weekday, uint8_t hour, uint8_t minute)
+{
+	cli();
+	Minutes = minute;
+	Hours = hour;
+	Weekday = weekday;
+	sei();
 }
