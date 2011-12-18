@@ -105,6 +105,7 @@ static void nRF24L01_config(void)
 // in receiving mode
 {
     // Set RF channel
+	nRF24L01_write_register(SETUP_AW, (ADDRESS_WIDTH - 2));
 	nRF24L01_write_register(RF_CH, DEF_RF_CH);
 	nRF24L01_write_register(CONFIG, DEF_CONFIG);
 	nRF24L01_write_register(SETUP_RETR, DEF_SETUP_RETR);
@@ -142,7 +143,7 @@ void nRF24L01_set_RADDR_01(uint8_t pipe, const uint8_t * addr)
 // Sets the receiving address
 {
 	if(pipe < 2)
-		nRF24L01_write_register_long(RX_ADDR_P0 + pipe, addr, 5);
+		nRF24L01_write_register_long(RX_ADDR_P0 + pipe, addr, ADDRESS_WIDTH);
 }
 
 /**
@@ -171,7 +172,7 @@ void nRF24L01_set_TADDR(const uint8_t * addr)
 {
     while(TxActive)
     	;
-	nRF24L01_write_register_long(TX_ADDR, addr, 5);
+	nRF24L01_write_register_long(TX_ADDR, addr, ADDRESS_WIDTH);
 }
 
 /**
@@ -196,8 +197,7 @@ uint8_t nRF24L01_get_data(uint8_t * data)
 {
     uint8_t len;
     uint8_t status;
-    //status = nRF24L01_command(R_RX_PL_WID, &len, 1);
-    len = 32;
+    status = nRF24L01_command(R_RX_PL_WID, &len, 1);
 
     if(len > 32)
     {
@@ -206,7 +206,6 @@ uint8_t nRF24L01_get_data(uint8_t * data)
     }
     nRF24L01_commandR(R_RX_PAYLOAD, data, len);
     nRF24L01_write_register(STATUS, (1 << RX_DR));
-    /* todo: datasheet says we shall read FIFO_STATUS to check for more data */
 
     return len;
 }
@@ -222,7 +221,7 @@ uint8_t nRF24L01_get_data(uint8_t * data)
 void nRF24L01_send(const uint8_t * data, uint8_t len, uint8_t rxAfterTx)
 {
     mirf_CE_lo;
-    displayAsciiDigit('0' + (nRF24L01_command(NOP, 0, 0) >> 4), 3);
+    //displayAsciiDigit('0' + (nRF24L01_command(NOP, 0, 0) >> 4), 3);
     TX;
     displaySymbols(LCD_TOWER, LCD_TOWER);
 
@@ -244,10 +243,15 @@ void nRF24L01_send(const uint8_t * data, uint8_t len, uint8_t rxAfterTx)
 }
 
 /* wakes the RF chip up. Delays by 5 ms */
-void nRF24L01_wakeUp(void)
+void nRF24L01_wakeUp(uint8_t rx)
 {
+	mirf_CE_lo;
 	nRF24L01_write_register(CONFIG, DEF_CONFIG | PWR_UP);
 	waitms(5);
+	if(rx) {
+		RX;
+		mirf_CE_hi;
+	}
 }
 
 /* put RF to deep power down. A wakeup is needed before the next transfer */
@@ -262,14 +266,20 @@ void nRF24L01_IRQ(void)
 	uint8_t status;
 	status = nRF24L01_command(NOP, 0, 0);
 	displayBargraph(++irqCount * 2);
-	if(status & (1 << TX_DS))
-	{
+
+	if(status & ((1 << TX_DS) | (1 << MAX_RT)))
+	{	/* doesn't matter if packet is transmitted successfully or not */
+		nRF24L01_command(FLUSH_TX, 0, 0);	/* on MAX_RT, packet is still there... */
 		if(TxActive == 2)
+		{
 			RX;
+			mirf_CE_hi;
+
+		}
 
 		TxActive = 0;
 		displaySymbols(0, LCD_TOWER);
-		nRF24L01_write_register(STATUS, 1 << TX_DS);
+		nRF24L01_write_register(STATUS, status & ((1 << TX_DS) | (1 << MAX_RT)));
 	}
 #ifdef RX_CALLBACK
 	if(status & (1 << RX_DR))
@@ -277,11 +287,18 @@ void nRF24L01_IRQ(void)
 		rxCallback();
 	}
 #endif
-}
+	}
 
 uint8_t nRF24L01_isTransmitting(void)
 {
 	return TxActive;
+}
+
+uint8_t nRF24L01_rxDataAvailable(void)
+{
+	uint8_t fifoStatus;
+	fifoStatus = nRF24L01_read_register(FIFO_STATUS);
+	return !(fifoStatus & (1 << RX_EMPTY));
 }
 
 void nRF24L01_set_rx_callback(void (*f)(void))

@@ -87,8 +87,9 @@
 
 /* RF_SETUP 6 reserved, 7 and 4 for test, all 0. 0 dont care */
 #define CONT_WAVE	7 /* continuous carrier transmission */
+#define RF_DR_LOW	5
 #define PLL_LOCK    4 /* force lock: only for test */
-#define RF_DR_HIGH       3 /* together with bit 5: 250 kBps possible */
+#define RF_DR_HIGH  3 /* together with bit 5: 250 kBps possible */
 #define RF_PWR      1 /* 0..3 -18, -12, -6, 0 dBm */
 #define LNA_HCURR   0 /* Obsolete in nRF24L01+ */
 
