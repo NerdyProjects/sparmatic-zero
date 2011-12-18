@@ -22,7 +22,11 @@
 #define POWERLOSS_PORTIN PINE
 #define POWERLOSS_PIN PE0
 
-static void sysShutdown(void);
+
+static void sysShutdown(void)
+{
+	//lcdOff();
+}
 
 ISR(PCINT1_vect)
 {
@@ -77,11 +81,6 @@ ISR(PCINT0_vect)
 }
 
 
-static void sysShutdown(void)
-{
-	//lcdOff();
-}
-
 static void sysSleep(void) {
 	OCR2A = 0;
 	ADCSRA &= ~(1 << ADEN); // Disable ADC
@@ -118,7 +117,7 @@ int main(void)
 	lcdInit();
 	keyInit();
 	ntcInit();
-	funkInit(10);
+	funkInit();
 	displayAsciiDigit('H', 0);
 	displayAsciiDigit('A', 1);
 	displayAsciiDigit('L', 2);
@@ -138,11 +137,11 @@ int main(void)
 			}
 		}
 
-		_delay_ms(700);
-		displayNumber(cnt++);
-		txPacket(cnt, 0, 0);
+		UpdateNtcTemperature();
 
-		//sysSleep();
+		funkSend();
+
+		sysSleep();
 	}
 
 	return -1;
