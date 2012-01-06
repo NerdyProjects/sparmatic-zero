@@ -16,6 +16,7 @@ static uint8_t Minutes;
 static uint8_t Hours;
 static uint8_t Weekday;
 volatile uint8_t Timer0H;
+volatile uint32_t SystemTime;
 
 static TimerCallback TimeoutCallback;
 
@@ -36,6 +37,7 @@ ISR(TIMER2_OVF_vect)
 {
 	/* used for waking up the device periodically */
 	uint8_t seconds = Seconds + 8;
+	SystemTime += 8;
 	if(seconds > 59) {
 		seconds -= 60;
 		Minutes += 1;

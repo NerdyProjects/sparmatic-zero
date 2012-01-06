@@ -23,6 +23,9 @@ extern const volatile uint8_t Weekday;
 
 extern const volatile uint8_t Timer0H;
 
+/* long system timer, incremented every 8 seconds. Starts at 0 on every system reset. */
+extern volatile uint32_t SystemTime;
+
 void timerInit(void);
 void enableTimeout(TimerCallback cbk, uint8_t timeout);
 void setTimeout(uint8_t timeout);

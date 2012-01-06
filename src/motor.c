@@ -12,6 +12,7 @@
 #include "keys.h"
 #include "motor.h"
 #include "timer.h"
+#include "adc.h"
 
 
 #define MOTOR_PORT PORTE
@@ -60,7 +61,11 @@
 
 #define MOTOR_POSITION_MAX 380
 
-typedef enum {STOP_NULL = 0, STOP_TIMEOUT = 1, STOP_CURRENT = 2, STOP_POSITION = 4} MOTOR_STOP_SOURCE;
+/* stop earlier than target */
+#define MOTOR_TARGET_STOP_EARLY 10
+#define MOTOR_TARGET_HYSTERESIS 4
+
+typedef enum {STOP_NULL = 0, STOP_TIMEOUT = 1, STOP_CURRENT = 2, STOP_POSITION = 4, STOP_TARGET = 8} MOTOR_STOP_SOURCE;
 
 volatile static uint8_t MotorStopSource;
 
@@ -73,6 +78,7 @@ static int16_t PositionValveClosed;
 /* used as stop condition, initialized to very slow speed stop/block stop */
 static uint8_t MotorTimeout = 95;
 static uint16_t CurrentLimit = 940;
+static int16_t TargetPosition = -1;
 
 
 /* Motorgeschwindigkeit Leerlauf ~ 70-90 Schritte pro Sekunde
@@ -92,11 +98,7 @@ void motorInit(void)
 
 static uint16_t getCurrent(void)
 {
-	ADMUX = (1 << REFS0) | ADC_CH_MOTOR;
-	ADCSRA = (1 << ADEN) | (1 << ADSC) | (1 << ADPS2);
-	while(ADCSRA & (1 << ADSC))	/* Conversion time will be about 400 µs at first conversion, 200 µs any other */
-		;
-	return ADC;
+	return getAdc(ADC_CH_MOTOR);
 }
 
 void motorStopMove(void)
@@ -139,26 +141,27 @@ static void motorMove(int8_t dir)
 	MOTOR_TIMER_START;
 }
 
-
-
-void motorStepOpen(void)
+/**
+ * drives valve position to given value.
+ * @param valve valve opening from 0..255
+ */
+void motorMoveTo(uint8_t valve)
 {
-	motorMove(DIR_OPEN);
-	while(key_state & KEY_ALL)
+	int16_t newPosition = PositionValveClosed + ((PositionValveOpen - PositionValveClosed) * valve) / 255;
+	TargetPosition = newPosition;
+	if(newPosition > MotorPosition + MOTOR_TARGET_HYSTERESIS)
 	{
-
+		TargetPosition -= MOTOR_TARGET_STOP_EARLY;
+		motorMove(DIR_OPEN);
 	}
-	motorStopMove();
+	else if(newPosition < MotorPosition - MOTOR_TARGET_HYSTERESIS)
+	{
+		TargetPosition += MOTOR_TARGET_STOP_EARLY;
+		motorMove(DIR_CLOSE);
+	}
+
 }
 
-void motorStepClose(void)
-{
-	motorMove(DIR_CLOSE);
-	while (key_state & KEY_ALL) {
-
-	}
-	motorStopMove();
-}
 
 /*
  * Fully opens the motor to detect end position. Closes until it detects touching the vent.
@@ -214,6 +217,14 @@ uint8_t motorStep(void)
 		MotorPosition += Direction;
 		if(MotorPosition < 0 || MotorPosition > MOTOR_POSITION_MAX) {
 			MotorStopSource |= STOP_POSITION;
+			motorStopMove();
+		}
+		if(TargetPosition >= 0
+			&& (   (Direction == DIR_OPEN && MotorPosition >= TargetPosition)
+			    || (Direction == DIR_CLOSE && MotorPosition <= TargetPosition)))
+		{
+			MotorStopSource |= STOP_TARGET;
+			TargetPosition = -1;
 			motorStopMove();
 		}
 		return 1;

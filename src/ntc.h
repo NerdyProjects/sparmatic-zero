@@ -9,7 +9,7 @@
 #define NTC_H_
 
 void ntcInit(void);
-int16_t UpdateNtcTemperature(void);
+int16_t updateNtcTemperature(void);
 uint16_t getNtcAdc(void);
 
 const int16_t Temperature;

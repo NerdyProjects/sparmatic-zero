@@ -13,7 +13,8 @@
 #include "timer.h"
 #include "nRF24L01.h"
 
-#define ADC_CH_BAT (14)
+#define ADC_CH_REF 30
+#define ADC_REF_MV 1100
 
 
 #define SLEEP_POWERSAVE ((1 << SM1) | (1 << SM0))
@@ -21,6 +22,18 @@
 
 #define POWERLOSS_PORTIN PINE
 #define POWERLOSS_PIN PE0
+
+uint16_t BatteryMV;
+
+static void updateBattery(void)
+{
+	uint16_t adc = getAdc(ADC_CH_REF);
+	/* Uin = scale/fullscale * Uref
+	 * -> here: Uref = ??; Uin = const
+	 * Uref = Uin/scale*fullscale
+	 */
+	batteryMV = ADC_REF_MV*1024 / adc;
+}
 
 
 static void sysShutdown(void)
@@ -108,7 +121,6 @@ void ioInit(void)
 
 int main(void)
 {
-	uint8_t cnt = 0;
 	_delay_ms(50);
 	timerInit();
 	pwrInit();
@@ -137,8 +149,8 @@ int main(void)
 			}
 		}
 
-		UpdateNtcTemperature();
-
+		updateNtcTemperature();
+		updateBattery();
 		funkSend();
 
 		sysSleep();

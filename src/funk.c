@@ -10,6 +10,10 @@
 #include "lcd.h"
 #include "motor.h"
 
+/* from main */
+extern uint16_t BatteryMV;
+
+
 void funkRxDataAvailable(void)
 {
 	static uint16_t readCounter = 0;
@@ -49,7 +53,7 @@ void funkSend(void)
 	MSG_FROM_THRM msg;
 	msg.info.temperatureActual = getNtcTemperature();
 	msg.info.valve = getMotorPosition();
-	//msg.info.battery =
+	msg.info.battery = BatteryMV;
 	//msg.info.temperatureNominal =
 	msg.time.day = Weekday;
 	msg.time.hour = Hours;

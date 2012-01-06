@@ -51,7 +51,7 @@ typedef struct {
 	TEMPERATURE temperatureActual;
 	TEMPERATURE temperatureNominal;
 	uint16_t valve;
-	uint8_t battery;
+	uint16_t battery;
 } MSG_THRM_INFO;
 
 typedef struct {

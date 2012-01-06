@@ -6,6 +6,7 @@
  */
 
 #include <avr/io.h>
+#include "adc.h"
 
 #define NTC_PORT PORTF
 #define NTC_DDR DDRF
@@ -53,16 +54,15 @@ void ntcInit(void)
 
 uint16_t getNtcAdc(void)
 {
+	uint16_t ntc;
 	NTC_PORT |= (1 << NTC_PIN);
-	ADMUX = (1 << REFS0) | (ADC_CH_NTC);
-	ADCSRA = (1 << ADEN) | (1 << ADSC) | (1 << ADPS2);
-	while(ADCSRA & (1 << ADSC))
-		;
+	ntc = getAdc(ADC_CH_NTC);
 	NTC_PORT &= ~(1 << NTC_PIN);
 	return ADC;
 }
 
-int16_t UpdateNtcTemperature(void)
+/** returns temperature * 100 */
+int16_t updateNtcTemperature(void)
 {
 	uint16_t ntcVoltage = getNtcAdc();
 	uint16_t ntcRes = VOLTAGE_DIVIDER_RES / (102300000UL / ntcVoltage - 100000);
