@@ -7,7 +7,7 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include "timerdef.h"
+#include "timer.h"
 
 typedef void (*TimerCallback)(void);
 
@@ -17,6 +17,8 @@ static uint8_t Hours;
 static uint8_t Weekday;
 volatile uint8_t Timer0H;
 volatile uint32_t SystemTime;
+
+static volatile TIME Time;
 
 static TimerCallback TimeoutCallback;
 
@@ -33,27 +35,30 @@ ISR(TIMER0_COMP_vect) {
 
 }
 
+/* used for waking up the device periodically */
 ISR(TIMER2_OVF_vect)
 {
-	/* used for waking up the device periodically */
-	uint8_t seconds = Seconds + 8;
+	TIME tTime = Time;
+
+	tTime.second += 8;
 	SystemTime += 8;
-	if(seconds > 59) {
-		seconds -= 60;
-		Minutes += 1;
-		if(Minutes > 59) {
-			Minutes = 0;
-			Hours += 1;
-			if(Hours > 23) {
-				Hours = 0;
-				Weekday += 1;
-				if(Weekday > 6) {
-					Weekday = 0;
+	if(tTime.second > 59) {
+		tTime.second -= 60;
+		tTime.minute += 1;
+		if(tTime.minute > 59) {
+			tTime.minute = 0;
+			tTime.hour += 1;
+			if(tTime.hour > 23) {
+				tTime.hour = 0;
+				tTime.weekday += 1;
+				if(tTime.weekday > 6) {
+					tTime.weekday = 0;
 				}
 			}
 		}
 	}
-	Seconds = seconds;
+
+	Time = tTime;
 }
 
 void timerInit(void)
@@ -97,4 +102,13 @@ void setTime(uint8_t weekday, uint8_t hour, uint8_t minute)
 	Hours = hour;
 	Weekday = weekday;
 	sei();
+}
+
+TIME getTime(void)
+{
+	TIME res;
+	cli();
+	res = Time;
+	sei();
+	return res;
 }

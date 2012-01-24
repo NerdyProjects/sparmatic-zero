@@ -12,6 +12,7 @@
 #include "motor.h"
 #include "timer.h"
 #include "nRF24L01.h"
+#include "adc.h"
 
 #define ADC_CH_REF 30
 #define ADC_REF_MV 1100
@@ -31,8 +32,9 @@ static void updateBattery(void)
 	/* Uin = scale/fullscale * Uref
 	 * -> here: Uref = ??; Uin = const
 	 * Uref = Uin/scale*fullscale
+	 * calculate at 32 bit
 	 */
-	batteryMV = ADC_REF_MV*1024 / adc;
+	BatteryMV = (ADC_REF_MV*1024UL / adc);
 }
 
 

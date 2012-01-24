@@ -14,12 +14,13 @@ void motorInit(void);
 void motorStepOpen(void);
 void motorStepClose(void);
 uint8_t motorStep(void);
+void motorMoveTo(uint8_t valve);
 uint8_t motorAdapt(void);
 uint8_t motorIsRunning(void);
 void motorTimer(void);
 
-const volatile int16_t MotorPosition;
+extern volatile int16_t MotorPosition;
 
-#define getMotorPosition(x) (MotorPosition)
+#define getMotorPosition(x) ((const volatile int16_t)MotorPosition)
 
 #endif /* MOTOR_H_ */

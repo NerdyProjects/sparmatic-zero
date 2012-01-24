@@ -9,6 +9,7 @@
 #include "timer.h"
 #include "lcd.h"
 #include "motor.h"
+#include "adc.h"
 
 /* from main */
 extern uint16_t BatteryMV;
@@ -51,13 +52,14 @@ void txPacket(uint8_t adr, MESSAGE_TYPE type, uint8_t *data)
 void funkSend(void)
 {
 	MSG_FROM_THRM msg;
+	TIME time = getTime();
 	msg.info.temperatureActual = getNtcTemperature();
 	msg.info.valve = getMotorPosition();
-	msg.info.battery = BatteryMV;
+	msg.info.battery = getBatteryVoltage();
 	//msg.info.temperatureNominal =
-	msg.time.day = Weekday;
-	msg.time.hour = Hours;
-	msg.time.minute = Minutes;
+	msg.time.day = time.weekday;
+	msg.time.hour = time.hour;
+	msg.time.minute = time.minute;
 
-	nRF24L01_send(&msg, sizeof(msg), 0);
+	nRF24L01_send((uint8_t *)&msg, sizeof(msg), 0);
 }

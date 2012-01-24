@@ -16,21 +16,27 @@
  */
 #define timerGet() (TCNT2)
 
-extern const volatile uint8_t Seconds;
-extern const volatile uint8_t Minutes;
-extern const volatile uint8_t Hours;
-extern const volatile uint8_t Weekday;
-
-extern const volatile uint8_t Timer0H;
+extern volatile uint8_t Timer0H;
 
 /* long system timer, incremented every 8 seconds. Starts at 0 on every system reset. */
 extern volatile uint32_t SystemTime;
+
+typedef struct
+{
+	uint8_t weekday;
+	uint8_t hour;
+	uint8_t minute;
+	uint8_t second;
+} TIME;
 
 void timerInit(void);
 void enableTimeout(TimerCallback cbk, uint8_t timeout);
 void setTimeout(uint8_t timeout);
 void disableTimeout(void);
 void setTime(uint8_t weekday, uint8_t hour, uint8_t minute);
+TIME getTime(void);
+
+
 
 
 #endif /* TIMER_H_ */

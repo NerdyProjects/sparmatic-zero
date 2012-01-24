@@ -21,6 +21,9 @@ static inline uint16_t getAdc(uint8_t channel)
 	return ADC;
 }
 
+extern uint16_t BatteryMV;
+
+#define getBatteryVoltage() (BatteryMV)
 
 
 #endif /* ADC_H_ */
