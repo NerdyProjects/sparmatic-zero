@@ -11,6 +11,7 @@
 #include <util/delay.h>
 
 #include "timer.h"
+#include "control.h"
 
 #define PROGRAM_DATA_BYTES_PER_WEEKDAY 24
 #define PROGRAM_DATA_BYTES_PER_HOUR 1
