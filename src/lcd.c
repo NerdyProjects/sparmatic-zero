@@ -6,6 +6,7 @@
  */
 
 #include <avr/io.h>
+#include <avr/pgmspace.h>
 #include <stdlib.h>
 #include "lcd.h"
 
@@ -16,7 +17,7 @@
  * 	msb	mlkjih	 ggfedcba lsb
  */
 #define FONT_ASCII_OFFSET '-'
-static const uint16_t Font[] = {
+static const uint16_t Font[] PROGMEM = {
 			0x00C0, // -
 			0, // .
 			0, // /
@@ -71,7 +72,7 @@ static const uint16_t Font[] = {
  * taken from TravelRec.
  */
 #define SEGMENTS_PER_DIGIT 14
-static const uint8_t Segments[] = {
+static const uint8_t Segments[] PROGMEM = {
 
 		126,124, 44,  5,  7,127, 47, 85, 87, 86,125, 6, 46,  45,	//left Digit
 		123,121,  1,  2,  4, 84, 43, 81, 83, 82,122, 3, 42,  41,	//middle left Digit
@@ -79,15 +80,15 @@ static const uint8_t Segments[] = {
 		140,142, 22, 21, 19, 99, 60,102,100,101,141, 20, 61, 62		//right Digit
 };
 
-static const uint8_t BargraphSegments[] = { 88, 48, 8, 9, 49, 89, 90, 50, 10,
+static const uint8_t BargraphSegments[] PROGMEM = { 88, 48, 8, 9, 49, 89, 90, 50, 10,
 		11, 51, 91, 92, 52, 12, 13, 53, 93, 134, 94, 54, 14, 15, 55 };
 
 
 /* Mo - So, LCDDR16 */
-static const uint8_t WeekdaySegments[] = {128, 129, 130, 131, 132, 133, 95};
+static const uint8_t WeekdaySegments[] PROGMEM = {128, 129, 130, 131, 132, 133, 95};
 
 /* enum LCD_SYMBOLS */
-static const uint8_t SymbolSegments[] = {80, 120, 40, 23, 24, 64, 104, 144, 103, 143, 135, 0};
+static const uint8_t SymbolSegments[] PROGMEM = {80, 120, 40, 23, 24, 64, 104, 144, 103, 143, 135, 0};
 
 static void segmentOn(uint8_t segment)
 {
@@ -116,7 +117,7 @@ static void displayDigit(uint16_t segments, uint8_t pos)
 	uint8_t segment;
 	for(i = 0; i < SEGMENTS_PER_DIGIT; ++i)
 	{
-		segment = Segments[segmentOffset + i];
+		segment = pgm_read_byte(&Segments[segmentOffset + i]);
 		segmentSwitch(segment, (segments & (1 << i)) > 0);
 	}
 }
@@ -130,7 +131,7 @@ void displayBargraph(uint32_t bargraphOn)
 	uint8_t i;
 	for(i = 0; i < sizeof(BargraphSegments); ++i)
 	{
-		segmentSwitch(BargraphSegments[i], (bargraphOn & (1 << i)) > 0);
+		segmentSwitch(pgm_read_byte(&BargraphSegments[i]), (bargraphOn & (1 << i)) > 0);
 	}
 }
 
@@ -143,7 +144,7 @@ void displayWeekday(uint8_t dayOn)
 	uint8_t i;
 	for(i = 0; i < 7; ++i)
 	{
-		segmentSwitch(WeekdaySegments[i], dayOn & (1 << i));
+		segmentSwitch(pgm_read_byte(&WeekdaySegments[i]), dayOn & (1 << i));
 	}
 }
 
@@ -158,7 +159,7 @@ void displaySymbols(LCD_SYMBOLS on, LCD_SYMBOLS mask)
 	for(i = 0; i < sizeof(SymbolSegments); ++i)
 	{
 		if(mask & (1 << i))
-			segmentSwitch(SymbolSegments[i], (on & (1 << i)) > 0);
+			segmentSwitch(pgm_read_byte(&SymbolSegments[i]), (on & (1 << i)) > 0);
 	}
 
 }
@@ -172,7 +173,7 @@ void displayAsciiDigit(char c, uint8_t pos)
 	if(pos >= NUM_DIGITS)
 		return;
 	uint8_t fontIndex = c - FONT_ASCII_OFFSET;
-	uint16_t segments = Font[fontIndex];
+	uint16_t segments = pgm_read_word(&Font[fontIndex]);
 	displayDigit(segments, pos);
 }
 

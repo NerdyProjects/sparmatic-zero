@@ -6,6 +6,7 @@
  */
 
 #include <avr/io.h>
+#include <avr/pgmspace.h>
 #include "adc.h"
 
 #define NTC_PORT PORTF
@@ -20,7 +21,7 @@
 #define NTC_START_DEGREE 0
 #define NTC_DEGREE_STEPS 5
 
-static const uint16_t NtcRes[] = {
+static const uint16_t NtcRes[] PROGMEM = {
 	34090		, //  0°C
 	26310		, //  5°C
 20440		, // 10°C
@@ -58,7 +59,7 @@ uint16_t getNtcAdc(void)
 	NTC_PORT |= (1 << NTC_PIN);
 	ntc = getAdc(ADC_CH_NTC);
 	NTC_PORT &= ~(1 << NTC_PIN);
-	return ADC;
+	return ntc;
 }
 
 /** returns temperature * 100 */
@@ -66,11 +67,15 @@ int16_t updateNtcTemperature(void)
 {
 	uint16_t ntcVoltage = getNtcAdc();
 	uint16_t ntcRes = VOLTAGE_DIVIDER_RES / (102300000UL / ntcVoltage - 100000);
+	uint16_t ntcResTbl;
 	uint8_t i = 0;
 	int16_t temperature;
-	while(NtcRes[i] > ntcRes)
+	while((ntcResTbl = pgm_read_word(&NtcRes[i])) > ntcRes)
 		++i;
-	temperature = NTC_START_DEGREE + i * NTC_DEGREE_STEPS * 100UL - (((ntcRes - NtcRes[i]) * NTC_DEGREE_STEPS * 100UL) / (NtcRes[i - 1] - NtcRes[i]));
+
+	temperature = NTC_START_DEGREE + i * NTC_DEGREE_STEPS * 100UL -
+			(((ntcRes - ntcResTbl) * NTC_DEGREE_STEPS * 100UL) /
+					(pgm_read_word(&NtcRes[i-1]) - ntcResTbl));
 
 	return temperature;
 }
