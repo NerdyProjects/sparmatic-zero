@@ -36,6 +36,20 @@ void disableTimeout(void);
 void setTime(uint8_t weekday, uint8_t hour, uint8_t minute);
 TIME getTime(void);
 
+#define addToTime(time, hours, minutes) \
+{ \
+	uint16_t tempMinute = time.minute + minutes; \
+	time.minute = tempMinute % 60; \
+	time.hour += tempMinute/60 + hours; \
+	time.weekday += time.hour / 24; \
+	time.hour %= 24; \
+}
+
+
+#define compareTime(a, b) \
+		((a.weekday < b.weekday) ? -1 : (a.weekday > b.weekday ? 1 : \
+				a.hour < b.hour ? -1 : (a.hour > b.hour ? 1 : \
+						a.minute < b.minute ? -1 : (a.minute == b.minute ? 0 : 1))))
 
 
 

@@ -17,14 +17,9 @@ extern uint16_t BatteryMV;
 
 void funkRxDataAvailable(void)
 {
-	static uint16_t readCounter = 0;
 	uint8_t rxData[32];
 	uint8_t readLen;
 	readLen = nRF24L01_get_data(rxData);
-
-	readCounter++;
-	displayWeekday(rxData[0]);
-	displayNumber(readCounter);
 }
 
 
