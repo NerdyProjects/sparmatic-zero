@@ -60,10 +60,12 @@
 #define MOTOR_SPEED_BLOCK_OPEN 60
 
 #define MOTOR_POSITION_MAX 380
+/* ventOpen - ventClosed has to be min. X motor steps */
+#define MOTOR_VENT_RANGE_MIN 70
 
 /* stop earlier than target */
-#define MOTOR_TARGET_STOP_EARLY 10
-#define MOTOR_TARGET_HYSTERESIS 4
+#define MOTOR_TARGET_STOP_EARLY 6
+#define MOTOR_TARGET_HYSTERESIS 10
 
 typedef enum {STOP_NULL = 0, STOP_TIMEOUT = 1, STOP_CURRENT = 2, STOP_POSITION = 4, STOP_TARGET = 8} MOTOR_STOP_SOURCE;
 
@@ -106,7 +108,7 @@ void motorStopMove(void)
 	disableTimeout();
 	MOTOR_STOP;
 	MOTOR_DIR_IN;
-	_delay_ms(800);
+	_delay_ms(800);		/* todo think about different implementation */
 	MOTOR_SENSE_OFF;
 	Direction = DIR_STOP;
 }
@@ -162,46 +164,67 @@ void motorMoveTo(uint8_t valve)
 
 }
 
+/*
+ * resets motor calibration and fully opens until block.
+ * @return not zero on hardware failure (no other errors possible)
+ */
+uint8_t motorFullOpen(void)
+{
+	MotorTimeout = MOTOR_SPEED_BLOCK_OPEN;
+	CurrentLimit = MOTOR_CURRENT_BLOCK_OPEN;
+	MotorPosition = 0;
+	TargetPosition = -1;
+	motorMove(DIR_OPEN);
+	while(motorIsRunning())
+		;
+	MotorPosition = MOTOR_POSITION_MAX;
+	if(MotorStopSource & ~(STOP_CURRENT | STOP_TIMEOUT))
+		return 1;	/* current detection and stop detection are okay */
+
+	return 0;
+}
 
 /*
- * Fully opens the motor to detect end position. Closes until it detects touching the vent.
+ * Closes until detection of touching the vent. close further until fully closed.
+ * @return not zero on error
  */
 uint8_t motorAdapt(void)
 {
 	uint16_t currentNormal;
 
-	MotorTimeout = MOTOR_SPEED_BLOCK_OPEN;
-	CurrentLimit = MOTOR_CURRENT_BLOCK_OPEN;
-	MotorPosition = 0;
-	motorMove(DIR_OPEN);
-	while(motorIsRunning())
-		;
-	MotorPosition = MOTOR_POSITION_MAX;
-	if(MotorStopSource & STOP_POSITION)
-		return 1;
-
 	MotorTimeout = MOTOR_SPEED_BLOCK;
 	CurrentLimit = MOTOR_CURRENT_BLOCK;
 
 	motorMove(DIR_CLOSE);
+	/* let vent start moving */
 	while(motorIsRunning() && MotorPosition > MOTOR_POSITION_MAX - 11)
 		;
 	currentNormal = getCurrent();
 
+	if(!motorIsRunning())
+		return 1;
+
+
+	/* wait for a small increase in motor power consumption -> vent touched */
 	while(motorIsRunning() && getCurrent() > (currentNormal - MOTOR_CURRENT_VALVE_DETECT))
-				;
+		;
 	PositionValveOpen = MotorPosition;
 
 	if(!motorIsRunning())
-		return 2;
+		return 1;
 
+	/* wait for motor turning off -> vent closed*/
 	while(motorIsRunning())
 		;
 
 	PositionValveClosed = MotorPosition;
 
-	if (MotorStopSource & STOP_POSITION)
-		return 3;
+	/* check for min. vent range, we may have an error in detection */
+	if(PositionValveOpen - PositionValveClosed < MOTOR_VENT_RANGE_MIN)
+		return 1;
+
+	if (MotorStopSource & ~(STOP_CURRENT | STOP_TIMEOUT))
+		return 1;
 
 	return 0;
 }
