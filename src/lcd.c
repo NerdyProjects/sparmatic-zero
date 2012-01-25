@@ -191,11 +191,37 @@ void displayString(char *str)
 	}
 }
 
-void displayNumber(int16_t num)
+/*
+ *  display a number consisting of up to four characters.
+ *  a minus sign is provided for negative numbers. (so we have
+ *  three remaining characters). Output will be left adjusted.
+ *  @param width leading with zeroes so we have given width
+ *  todo: filling width will be done with sign character...
+ */
+void displayNumber(int16_t num, int8_t width)
 {
-	char buf[7];
-	itoa(num, buf, 10);
-	displayString(buf);
+	char buf[NUM_DIGITS + 1];
+	uint8_t i = NUM_DIGITS;
+	char sign = ' ';
+	if(num < 0)
+	{
+		sign = '-';
+		num = -num;
+	}
+
+	buf[NUM_DIGITS] = 0;
+	while(i && num != 0)
+	{
+		buf[--i] = '0' + (num % 10);
+		num /= 10;
+	}
+	width -= NUM_DIGITS-i;	/* subtract already written chars */
+	while(i && width > 0)
+	{
+		buf[--i] = sign;	/* leading sign chars */
+		--width;
+	}
+	displayString(buf[i]);	/* begin output at first wanted character */
 }
 
 

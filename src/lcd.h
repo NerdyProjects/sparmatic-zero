@@ -14,7 +14,7 @@ typedef enum {LCD_AUTO = 1, LCD_MANU = 2, LCD_BAG = 4, LCD_TOWER = 8, LCD_INHOUS
 void lcdInit(void);
 void displayAsciiDigit(char c, uint8_t pos);
 void displayString(char *str);
-void displayNumber(int16_t num);
+void displayNumber(int16_t num, int8_t width);
 void displayBargraph(uint32_t bargraphOn);
 void displayWeekday(uint8_t dayOn);
 void displaySymbols(LCD_SYMBOLS on, LCD_SYMBOLS mask);
