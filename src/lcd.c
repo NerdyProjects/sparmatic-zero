@@ -202,7 +202,7 @@ void displayNumber(int16_t num, int8_t width)
 {
 	char buf[NUM_DIGITS + 1];
 	uint8_t i = NUM_DIGITS;
-	char sign = ' ';
+	char sign = '.';
 	if(num < 0)
 	{
 		sign = '-';
@@ -221,7 +221,7 @@ void displayNumber(int16_t num, int8_t width)
 		buf[--i] = sign;	/* leading sign chars */
 		--width;
 	}
-	displayString(buf[i]);	/* begin output at first wanted character */
+	displayString(&buf[i]);	/* begin output at first wanted character */
 }
 
 
