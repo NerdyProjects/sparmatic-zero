@@ -22,6 +22,8 @@ void motorTimer(void);
 
 
 extern volatile int16_t MotorPosition;
+extern int16_t PositionValveOpen;
+extern int16_t PositionValveClosed;
 
 #define getMotorPosition(x) ((const volatile int16_t)MotorPosition)
 

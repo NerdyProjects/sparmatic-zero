@@ -74,8 +74,8 @@ volatile static uint8_t MotorStopSource;
 volatile static int8_t Direction = 0;
 volatile static uint8_t PWM;
 volatile int16_t MotorPosition = 0;
-static int16_t PositionValveOpen;
-static int16_t PositionValveClosed;
+int16_t PositionValveOpen;
+int16_t PositionValveClosed;
 
 /* used as stop condition, initialized to very slow speed stop/block stop */
 static uint8_t MotorTimeout = 95;
