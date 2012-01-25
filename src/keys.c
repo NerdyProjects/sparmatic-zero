@@ -94,6 +94,20 @@ uint8_t get_key_long( uint8_t key_mask )
   return get_key_press( get_key_rpt( key_mask ));
 }
 
+/*
+ * get increment/decrement keys.
+ * This may be extended for rotary encoders in future version.
+ */
+int8_t get_key_increment(void)
+{
+	uint8_t keys = get_key_press((1 << KEY_MINUS) | (1 << KEY_PLUS));
+	if(keys & (1 << KEY_PLUS))
+		return 1;
+	if(keys & (1 << KEY_MINUS))
+		return -1;
+	return 0;
+}
+
 void keyInit(void)
 {
    // Configure debouncing routines
