@@ -34,7 +34,7 @@
  * additionally, an okay press returns immediately.
  * time 256 ms steps (TIMER0 Overflow used).
  */
-#define INPUT_TIMEOUT	(50)
+#define INPUT_TIMEOUT	(30)
 #define TIMEOUT_READ		(Timer0H)
 
 #define TIMEOUT_RENEW	timeout = TIMEOUT_READ + INPUT_TIMEOUT
@@ -44,11 +44,11 @@
 uint16_t BatteryMV;
 
 typedef enum {
-	MENU_SELECTOR, MENU_MAIN, MENU_FIRST, MENU_PID, MENU_PROGRAM, MENU_OTA_UPDATE, MENU_LAST
+	MENU_SELECTOR, MENU_FIRST, MENU_MAIN, MENU_PID, MENU_PROGRAM, MENU_OTA_UPDATE, MENU_VENT, MENU_TEMPERATURE_ADJUST, MENU_LAST
 } MENU;
 
-const char MenuText[][5] PROGMEM = {" PID", "PROG", "OTAU"};
-const char PIDText[][5] PROGMEM = {" K-P", " K-D", " K-I", " INT", "IMAX", "ELST"};
+const char MenuText[][5] PROGMEM = {"MAIN", ".PID", "PROG", "OTAU", "VENT", "TADJ"};
+const char PIDText[][5] PROGMEM = {".K-P", ".K-D", ".K-I", " INT", "IMAX", "ELST"};
 
 static void updateBattery(void)
 {
@@ -227,9 +227,9 @@ static uint8_t inputSelector(const char text[][5], uint8_t min, uint8_t max, uin
 		displayString(buf);
 		value += valueChange;
 		if (value > max)
-			value -= max - min;
+			value -= max - min + 1;
 		else if (value < min)
-			value += max - min;
+			value += max - min + 1;
 	}
 
 	return value;
@@ -240,6 +240,11 @@ static void menu(void) {
 	static uint8_t menuData = 0; /* number of screen in menu */
 
 	uint8_t valueChange;
+	if(get_key_long(1 << KEY_MENU)) {
+		displaySymbols(0, LCD_BAG | LCD_DP | LCD_HOURS | LCD_INHOUSE | LCD_LOCK | LCD_MOON | LCD_OUTHOUSE | LCD_STAR);
+		menuData = currentMenu;
+		currentMenu = MENU_SELECTOR;
+	}
 	switch (currentMenu) {
 	case MENU_SELECTOR: {
 		uint8_t nextMenu = menuData;
@@ -272,13 +277,16 @@ static void menu(void) {
 			hours = inputNumber(0, 995, 5, 5, 3);
 			dismissProgramChanges(hours * 6);
 		}
+		if(get_key_press(1 << KEY_OK)) {
+			menuData = 1 - menuData;
+		}
 		break;
 	}
 	case MENU_PID:
 	{
 		int16_t value;
 		if(get_key_short(1 << KEY_MENU)) {
-			menuData = inputSelector(PIDText, 0, sizeof(PIDText), menuData, 0);
+			menuData = inputSelector(PIDText, 0, sizeof(PIDText) / sizeof(PIDText[0]), menuData, 0);
 		}
 		switch (menuData) {
 		case 0:
@@ -302,6 +310,7 @@ static void menu(void) {
 		default:
 			value = -999;
 		}
+		displayNumber(value, 4);
 		if (get_key_increment()) {
 			value = inputNumber(-999, 9999, value, 1, 4);
 			switch (menuData) {
@@ -327,6 +336,37 @@ static void menu(void) {
 		}
 		break;
 	}
+	case MENU_VENT:
+	{
+		int16_t value;
+		if(get_key_increment()) {
+			menuData = inputNumber(0, 2, menuData, 1, 4);
+		}
+		switch(menuData)
+		{
+		case 0:
+			value = MotorPosition;
+			break;
+		case 1:
+			value = PositionValveOpen;
+			break;
+		case 2:
+			value = PositionValveClosed;
+			break;
+		default:
+			value = -999;
+		}
+		displayNumber(value, 4);
+		break;
+	}
+	case MENU_TEMPERATURE_ADJUST:
+	{
+		displaySymbols(LCD_DP, LCD_DP);
+		NTCOffset = inputNumber(-1000, 1000, NTCOffset, 10, 4);
+		break;
+	}
+	default:
+		break;
 	}
 }
 
@@ -343,12 +383,12 @@ int main(void)
 	funkInit();
 	sei();
 
-	if(ventInit())
+	/*if(ventInit())
 	{
-		while(1)	/* we do not want to operate with an incorrect setup */
+		while(1)	/* we do not want to operate with an incorrect setup
 			sysSleep();
 			;
-	}
+	} */
 
 	while(1)
 	{
@@ -356,7 +396,7 @@ int main(void)
 
 		updateNtcTemperature();
 		updateBattery();
-		funkSend();
+		//funkSend();
 
 		sysSleep();
 	}

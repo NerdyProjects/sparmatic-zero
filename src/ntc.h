@@ -9,11 +9,10 @@
 #define NTC_H_
 
 void ntcInit(void);
-int16_t updateNtcTemperature(void);
-uint16_t getNtcAdc(void);
+void updateNtcTemperature(void);
 
-const int16_t Temperature;
-
-#define getNtcTemperature(x) (Temperature)
+extern int16_t Temperature;
+extern int8_t NTCOffset;
+#define getNtcTemperature(x) ((const int16_t)Temperature)
 
 #endif /* NTC_H_ */

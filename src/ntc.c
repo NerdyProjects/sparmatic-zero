@@ -46,6 +46,7 @@ static const uint16_t NtcRes[] PROGMEM = {
 };
 
 int16_t Temperature;
+int16_t NTCOffset = 200;
 
 
 void ntcInit(void)
@@ -53,7 +54,7 @@ void ntcInit(void)
 	NTC_DDR |= (1 << NTC_PIN);
 }
 
-uint16_t getNtcAdc(void)
+static uint16_t getNtcAdc(void)
 {
 	uint16_t ntc;
 	NTC_PORT |= (1 << NTC_PIN);
@@ -62,8 +63,9 @@ uint16_t getNtcAdc(void)
 	return ntc;
 }
 
+
 /** returns temperature * 100 */
-int16_t updateNtcTemperature(void)
+void updateNtcTemperature(void)
 {
 	uint16_t ntcVoltage = getNtcAdc();
 	uint16_t ntcRes = VOLTAGE_DIVIDER_RES / (102300000UL / ntcVoltage - 100000);
@@ -77,5 +79,5 @@ int16_t updateNtcTemperature(void)
 			(((ntcRes - ntcResTbl) * NTC_DEGREE_STEPS * 100UL) /
 					(pgm_read_word(&NtcRes[i-1]) - ntcResTbl));
 
-	return temperature;
+	Temperature = temperature - NTCOffset;
 }
