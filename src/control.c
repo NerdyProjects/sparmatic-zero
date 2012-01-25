@@ -20,15 +20,15 @@ int16_t targetTemperature;
 /* a controller result of 0 will set vent to halve open */
 CONTROLLER controller = {
 		150,		/* k_p */
-		50,			/* k_d 50: +0.5 deg in 60 seconds -> ud~ -50 */
-		3,			/* k_i */
-		-10000,		/* i_val */
-		32767,		/* i_max */
+		10,			/* k_d 50: +0.5 deg in 60 seconds -> ud~ -50 */
+		2,			/* k_i */
+		-15000,		/* i_val */
+		20000,		/* i_max */
 		0,			/* e_last */
 		0,			/* t_last */
-		3,			/* i_scale_off factor */
-		5,			/* i_scale_p factor*/
-		70			/* i_scale_p_lim aware: not scaled!*/
+		5,			/* i_scale_off factor */
+		2,			/* i_scale_p factor*/
+		100			/* i_scale_p_lim aware: not scaled!*/
 };
 
 
@@ -65,6 +65,12 @@ void control(void)
 		i_change /= ctrl.i_scale_p;
 
 	ctrl.i_val += i_change;
+
+	if(ctrl.i_val > ctrl.i_max)
+		ctrl.i_val = ctrl.i_max;
+	else if(ctrl.i_val < -ctrl.i_max)
+		ctrl.i_val = -ctrl.i_max;
+
 	ui = ctrl.i_val;
 
 	result = up + ud + ui;
