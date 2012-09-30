@@ -31,7 +31,6 @@
 #include "nRF24L01_ll.h"
 #include "spi.h"
 #include "wait.h"
-#include "lcd.h"
 
 // Defines for setting the MiRF registers for transmitting or receiving mode
 #define TX nRF24L01_write_register(CONFIG, DEF_CONFIG | ( (1<<PWR_UP) | (0<<PRIM_RX) ) )
@@ -55,12 +54,10 @@ static void (*rxCallback)(void);
 static uint8_t nRF24L01_command(uint8_t cmd, const uint8_t *data, uint8_t len)
 {
 	uint8_t sreg;
+	SPI_MSTR;
 	mirf_CSN_lo;
 	sreg = spi_rw1(cmd);
-	if(len > 1)
-		spi_w(data, len);
-	else if(len == 1)
-		spi_rw1(*data);
+	spi_w(data, len);
 	mirf_CSN_hi;
 	return sreg;
 }
@@ -71,12 +68,10 @@ static uint8_t nRF24L01_command(uint8_t cmd, const uint8_t *data, uint8_t len)
 static uint8_t nRF24L01_commandR(uint8_t cmd, uint8_t *data, uint8_t len)
 {
 	uint8_t sreg;
+	SPI_MSTR;
 	mirf_CSN_lo;
 	sreg = spi_rw1(cmd);
-	if(len > 1)
-		spi_rw(data, data, len);
-	else if(len == 1)
-		*data = spi_rw1(*data);
+	spi_rw(data, len);
 	mirf_CSN_hi;
 	return sreg;
 }
@@ -101,26 +96,21 @@ static void nRF24L01_write_register_long(uint8_t reg, const uint8_t *data, uint8
 
 
 static void nRF24L01_config(void)
-// Sets the important registers in the MiRF module and powers the module
-// in receiving mode
+// Sets the important registers in the MiRF module
 {
     // Set RF channel
-	nRF24L01_write_register(SETUP_AW, (ADDRESS_WIDTH - 2));
+	nRF24L01_write_register(CONFIG, 0);
 	nRF24L01_write_register(RF_CH, DEF_RF_CH);
-	nRF24L01_write_register(CONFIG, DEF_CONFIG);
-	nRF24L01_write_register(SETUP_RETR, DEF_SETUP_RETR);
 	nRF24L01_write_register(RF_SETUP, DEF_RF_SETUP);
+	nRF24L01_write_register(SETUP_AW, (ADDRESS_WIDTH - 2));
+	nRF24L01_write_register(SETUP_RETR, DEF_SETUP_RETR);
 	nRF24L01_write_register(FEATURE, DEF_FEATURE);
 	nRF24L01_write_register(DYNPD, DEF_DYNPD);
-#ifdef DISABLE_ENHANCED_SHOCKBURST
-	nRF24L01_write_register(EN_AA, 0);
-#endif
-
-	nRF24L01_write_register(EN_RXADDR, 0);	/* disable all rx pipes */
+	nRF24L01_write_register(EN_RXADDR, 1);	/* disable all rx pipes except first one*/
+	//nRF24L01_write_register(EN_AA, (1 << ENAA_P0));	/* default: all ENAA set*/
 	nRF24L01_command(FLUSH_RX, 0, 0);
 	nRF24L01_command(FLUSH_TX, 0, 0);
 	nRF24L01_write_register(STATUS, (1 << RX_DR | (1 << TX_DS) | (1 << MAX_RT)));
-
 }
 
 /**
@@ -220,17 +210,11 @@ uint8_t nRF24L01_get_data(uint8_t * data)
  */
 void nRF24L01_send(const uint8_t * data, uint8_t len, uint8_t rxAfterTx)
 {
-    mirf_CE_lo;
-    //displayAsciiDigit('0' + (nRF24L01_command(NOP, 0, 0) >> 4), 3);
-    TX;
-    displaySymbols(LCD_TOWER, LCD_TOWER);
 
     while(TxActive)
-    	if(IRQ_PORT_IN & (1 << IRQ_PIN))
-    		displaySymbols((LCD_AUTO), LCD_AUTO);
-    	else
-    		displaySymbols(0, LCD_AUTO);
     	;
+
+    TX;
     nRF24L01_command(W_TX_PAYLOAD, data, len);
 
     mirf_CE_hi;                     // Start transmission
@@ -257,29 +241,28 @@ void nRF24L01_wakeUp(uint8_t rx)
 /* put RF to deep power down. A wakeup is needed before the next transfer */
 void nRF24L01_sleep(void)
 {
+	mirf_CE_lo;
 	nRF24L01_write_register(CONFIG, DEF_CONFIG);
 }
 
 void nRF24L01_IRQ(void)
 {
-	static uint8_t irqCount = 0;
 	uint8_t status;
 	status = nRF24L01_command(NOP, 0, 0);
-	displayBargraph(++irqCount * 2);
 
 	if(status & ((1 << TX_DS) | (1 << MAX_RT)))
 	{	/* doesn't matter if packet is transmitted successfully or not */
 		nRF24L01_command(FLUSH_TX, 0, 0);	/* on MAX_RT, packet is still there... */
+
 		if(TxActive == 2)
 		{
 			RX;
 			mirf_CE_hi;
-
 		}
 
 		TxActive = 0;
-		displaySymbols(0, LCD_TOWER);
-		nRF24L01_write_register(STATUS, status & ((1 << TX_DS) | (1 << MAX_RT)));
+		/* clear status flags. as we do same action on both we may clear both. */
+		nRF24L01_write_register(STATUS, (1 << TX_DS) | (1 << MAX_RT));
 	}
 #ifdef RX_CALLBACK
 	if(status & (1 << RX_DR))

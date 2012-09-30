@@ -3,8 +3,9 @@
 #include <avr/sleep.h>
 #include <avr/pgmspace.h>
 #include <util/delay.h>
+#include <avr/wdt.h>
 
-
+#include "bootloader/bootloader.h"
 #include "nRF24L01_ll.h"
 #include "funk.h"
 #include "lcd.h"
@@ -40,6 +41,8 @@
 #define TIMEOUT_RENEW	timeout = TIMEOUT_READ + INPUT_TIMEOUT
 #define TIMEOUT_INIT	uint8_t TIMEOUT_RENEW
 #define TIMEOUT_OKAY	(timeout - TIMEOUT_READ < (INPUT_TIMEOUT + 1))
+
+#define RF_STATUS_MESSAGES (15)
 
 uint16_t BatteryMV;
 
@@ -106,9 +109,8 @@ ISR(PCINT0_vect)
 	if(newState & (1 << POWERLOSS_PIN))
 		sysShutdown();
 
-	if(~newState & changed & (1 << IRQ_PIN))
+	if(~newState & (1 << IRQ_PIN))
 	{
-		/* this may happen more often than the real IRQ */
 		nRF24L01_IRQ();
 	}
 
@@ -365,6 +367,10 @@ static void menu(void) {
 		NTCOffset = inputNumber(-1000, 1000, NTCOffset, 10, 4);
 		break;
 	}
+	case MENU_OTA_UPDATE:
+	{
+		BOOTLOADER_EXECUTE();
+	}
 	default:
 		break;
 	}
@@ -372,6 +378,7 @@ static void menu(void) {
 
 int main(void)
 {
+	uint32_t lastStatusMessageSent = 0;
 	_delay_ms(50);
 	timerInit();
 	pwrInit();
@@ -392,11 +399,16 @@ int main(void)
 
 	while(1)
 	{
-		menu();
-
 		updateNtcTemperature();
 		updateBattery();
-		//funkSend();
+
+		menu();
+
+		if(lastStatusMessageSent + RF_STATUS_MESSAGES < SystemTime)
+		{
+			funkSend();
+			lastStatusMessageSent = SystemTime;
+		}
 
 		sysSleep();
 	}

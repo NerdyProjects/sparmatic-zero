@@ -10,6 +10,8 @@
 #include "lcd.h"
 #include "motor.h"
 #include "adc.h"
+#include "control.h"
+#include "programming.h"
 
 /* from main */
 extern uint16_t BatteryMV;
@@ -31,7 +33,6 @@ void funkInit(void)
 {
 	nRF24L01_init();
 	nRF24L01_set_RADDR_01(0, ThermostatAdr);
-	nRF24L01_enable_RPIPE(0);
 	nRF24L01_set_TADDR(ThermostatAdr);
 	nRF24L01_set_rx_callback(&funkRxDataAvailable);
 }
@@ -51,7 +52,7 @@ void funkSend(void)
 	msg.info.temperatureActual = getNtcTemperature();
 	msg.info.valve = getMotorPosition();
 	msg.info.battery = getBatteryVoltage();
-	//msg.info.temperatureNominal =
+	msg.info.temperatureNominal = targetTemperature;
 	msg.time.day = time.weekday;
 	msg.time.hour = time.hour;
 	msg.time.minute = time.minute;

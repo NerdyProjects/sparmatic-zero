@@ -12,17 +12,17 @@
 
 //#define DISABLE_ENHANCED_SHOCKBURST
 
-/* Not implemented so far. Future: Callback out of Interupt for incoming packet */
+/* Callback out of Interupt for incoming packet */
 #define RX_CALLBACK 1
 
 /* 2 Byte CRC */
-#define DEF_CONFIG     ( (1<<EN_CRC) | (0<<CRCO))
+#define DEF_CONFIG     ( (1<<EN_CRC) | (1<<CRCO))
 
 /* N Byte addresses (3-5) */
 #define ADDRESS_WIDTH 3
 
 /* ((ARD+1) * 0,25ms) retransmission delay, up to 8 retransmissions */
-#define DEF_SETUP_RETR ((5 << ARD) | (8 << ARC))
+#define DEF_SETUP_RETR ((7 << ARD) | (2 << ARC))
 
 /* Channel Offset in MHz*/
 /* ISM is 2,4-2,47xx MHz */
@@ -51,6 +51,7 @@ void nRF24L01_wakeUp(uint8_t rx);
 void nRF24L01_sleep(void);
 void nRF24L01_set_rx_callback(void (*f)(void));
 void nRF24L01_set_RXPW(uint8_t pipe, uint8_t len);
+uint8_t nRF24L01_isTransmitting(void);
 uint8_t nRF24L01_rxDataAvailable(void);
 
 void nRF24L01_IRQ(void);

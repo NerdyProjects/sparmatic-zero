@@ -40,7 +40,7 @@
 #define IRQ_DDR		DDRE
 #define IRQ_PORT	PORTE
 #define IRQ_PORT_IN	PINE
-#define IRQ_PIN		PE3	/* INTERRUPT WECHSELN! WAR PE4 todo */
+#define IRQ_PIN		PE3
 #define CE  PF7
 #define CSN PE4
 

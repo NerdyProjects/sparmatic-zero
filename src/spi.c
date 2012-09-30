@@ -36,34 +36,25 @@
 #define DD_OWN_SS	DDB0		/* Sparmatic: This pin is used as button '+' or rotary input */
 #define DD_SCK      DDB1
 
+
+
 void spi_init()
 // Initialize pins for spi communication
 {
-	DDR_SPI &= ~((1 << DD_MOSI) | (1 << DD_MISO) | (1 << DD_SCK));
-	// Define the following pins as output
-	DDR_SPI |= ((1 << DD_MOSI) | (1 << DD_SCK));
-
-	SPCR = ((1 << SPE) | // SPI Enable
-			(0 << SPIE) | // SPI Interupt Enable
-			(0 << DORD) | // Data Order (0:MSB first / 1:LSB first)
-			(1 << MSTR) | // Master/Slave select
-			(0 << SPR1) | (0 << SPR0) | // SPI Clock Rate: fOsc / 2 for minimum active time
-			(0 << CPOL) | // Clock Polarity (0:SCK low / 1:SCK hi when idle)
-			(0 << CPHA)); // Clock Phase (0:leading / 1:trailing edge sampling)
-
 	SPSR = (1 << SPI2X); // Double Clock Rate
 
-	if(SPSR & (1 << SPIF))
-		SPDR;	/* Clear SPIF */
-
+	SPI_MSTR;
 }
 
-void spi_rw(const uint8_t * dataout, uint8_t * datain, uint8_t len)
+void spi_rw(uint8_t * data, uint8_t len)
 // Shift full array through target device
 {
 	uint8_t i;
 	for (i = 0; i < len; i++) {
-		datain[i] = spi_rw1(dataout[i]);
+		SPDR = data[i];
+		while((SPSR & (1<<SPIF))==0)
+			;
+		data[i] = SPDR;
 	}
 }
 
@@ -72,7 +63,9 @@ void spi_w(const uint8_t * dataout, uint8_t len)
 {
 	uint8_t i;
 	for (i = 0; i < len; i++) {
-		spi_rw1(dataout[i]);
+		SPDR = dataout[i];
+		while((SPSR & (1<<SPIF))==0)
+			;
 	}
 }
 

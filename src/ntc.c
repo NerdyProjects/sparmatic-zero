@@ -46,7 +46,7 @@ static const uint16_t NtcRes[] PROGMEM = {
 };
 
 int16_t Temperature;
-int16_t NTCOffset = 200;
+int16_t NTCOffset = 0;
 
 
 void ntcInit(void)

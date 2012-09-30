@@ -10,7 +10,7 @@
 
 #ifdef __AVR__
 #include <util/delay.h>
-#define wait10us(x)
+#define wait10us(x) {asm("rjmp ."); asm("rjmp ."); asm("rjmp ."); asm("rjmp ."); asm("rjmp .");}
 
 static inline void waitms(uint8_t ms)
 {

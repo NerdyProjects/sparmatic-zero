@@ -31,16 +31,30 @@
 
 
 extern void spi_init(void);
-extern void spi_rw (const uint8_t * dataout, uint8_t * datain, uint8_t len);
+extern void spi_rw(uint8_t * data, uint8_t len);
 extern void spi_w (const uint8_t * dataout, uint8_t len);
+
+// SPI Interupt Enable
+// Data Order (0:MSB first / 1:LSB first)
+// Master/Slave select
+// SPI Clock Rate: fOsc / 2 for minimum active time
+// Clock Polarity (0:SCK low / 1:SCK hi when idle)
+// Clock Phase (0:leading / 1:trailing edge sampling))
+#define SPI_MSTR	{SPCR = ((1 << SPE) | \
+			(0 << SPIE) | \
+			(0 << DORD) |\
+			(1 << MSTR) |  \
+			(0 << SPR1) | (0 << SPR0) | \
+			(0 << CPOL) |  \
+			(0 << CPHA)); SPSR; SPDR; }
 
 static inline uint8_t spi_rw1 (uint8_t data)
 // Clocks only one byte to target device and returns the received one
 {
     SPDR = data;
-    while((SPSR & (1<<SPIF))==0);
+    while((SPSR & (1<<SPIF))==0)
+    	;
     return SPDR;
 }
-
 
 #endif /* _SPI_H_ */
